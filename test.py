@@ -1,2 +1,2 @@
 # changes
-print("Bye world")
+print("Bye friend")
