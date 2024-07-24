@@ -1,2 +1,0 @@
-# changes
-print("Bye friend")
