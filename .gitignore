@@ -1,2 +1,4 @@
 test_script.py
 dist/
+*.egg-info
+development.ipynb

@@ -10,4 +10,8 @@ setup(
     long_description_content_type="text/markdown",
     url="https://github.com/dehe1011/ExampleProject",
     packages=find_packages(),
+    include_package_data=True,
+    package_data={
+        'ExampleProject_11': ['data/*.json'],
+    },
 )
