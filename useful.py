@@ -1,3 +1,5 @@
+print(3+4)
+
 # # -------------------- iterations ---------------------------------------
 
 # from itertools import permutations, product
