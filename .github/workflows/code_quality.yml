@@ -21,7 +21,7 @@ jobs:
         pip install pylint pytest black
 
     - name: Run pylint
-      run: pylint ExampleProject
+      run: pylint $(find . -type f -name "*.py")
 
     - name: Run tests with pytest
       run: pytest
