@@ -44,9 +44,7 @@ jobs:
         pip install pytest
 
     - name: Run tests with pytest
-      env:
-        PYTHONPATH: src
-      run: pytest
+      run: python -m pytest
 
   format-check:
     runs-on: ubuntu-latest
