@@ -12,6 +12,6 @@ setup(
     packages=find_packages(),
     include_package_data=True,
     package_data={
-        'ExampleProject_11': ['data/*.json'],
+        "ExampleProject_11": ["data/*.json"],
     },
 )
