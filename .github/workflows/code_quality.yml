@@ -3,7 +3,7 @@ name: Code Quality with pylint, pytest, black
 on: [push, pull_request]
 
 jobs:
-  lint:
+  pylint:
     runs-on: ubuntu-latest
 
     steps:
@@ -25,9 +25,9 @@ jobs:
     - name: Run pylint
       continue-on-error: true
       run: |
-        find src test -type f -name "*.py" ! -name "__init__.py" | xargs pylint
+        find src tests -type f -name "*.py" ! -name "__init__.py" | xargs pylint
 
-  test:
+  pytest:
     runs-on: ubuntu-latest
 
     steps:
@@ -47,7 +47,7 @@ jobs:
     - name: Run tests with pytest
       run: python -m pytest
 
-  format-check:
+  black:
     runs-on: ubuntu-latest
 
     steps:
