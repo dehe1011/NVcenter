@@ -1,4 +1,8 @@
 test_script.py
+development.ipynb
+
 dist/
 *.egg-info
-development.ipynb
+
+.ipynb_checkpoints/
+__pycache__/
