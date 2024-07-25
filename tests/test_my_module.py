@@ -1,3 +1,7 @@
+"""
+this module test my_module. 
+"""
+
 import pytest
 from src import my_add, my_mul
 
