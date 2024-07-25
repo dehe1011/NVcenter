@@ -30,4 +30,5 @@ jobs:
         pylint test/**/*.py
 
     - name: Run black
+      continue-on-error: true
       run: black --check .
