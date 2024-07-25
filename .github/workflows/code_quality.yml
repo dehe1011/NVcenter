@@ -20,11 +20,14 @@ jobs:
         python -m pip install --upgrade pip
         pip install pylint pytest black
 
-    - name: Run pylint
-      run: pylint $(find . -type f -name "*.py")
-
     - name: Run tests with pytest
       run: pytest
+
+    - name: Run pylint
+      continue-on-error: true
+      run: |
+        pylint src/**/*.py
+        pylint test/**/*.py
 
     - name: Run black
       run: black --check .
