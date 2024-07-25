@@ -29,5 +29,3 @@ def my_load():
     with open(ROOT_DIR + "/data/params.json", "rb") as f:
         data = json.load(f)
     return data
-
-
