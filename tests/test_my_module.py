@@ -14,7 +14,7 @@ def test_my_add(x, y, expected):
     assert my_add(x, y) == expected
 
 
-@pytest.mark.parametrize("x, y, expected", [(1,2,2), (4,-2,-8)] )
+@pytest.mark.parametrize("x, y, expected", [(1, 2, 2), (4, -2, -8)])
 def test_my_mul(x, y, expected):
     """
     Tests my_mul().
