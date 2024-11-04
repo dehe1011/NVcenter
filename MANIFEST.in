@@ -1,4 +1,12 @@
+# Include the README, LICENSE, and other documentation files
 include README.md
-include LICENSE.txt
-include data/*.json
-readthedocs.yaml
+
+# Include requirement files
+include requirements/*.txt
+
+# Include the MANIFEST file itself
+include MANIFEST.in
+
+# Include all .py and .json files
+recursive-include src *.py
+recursive-include src *.json

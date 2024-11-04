@@ -1,8 +1,33 @@
-test_script.py
-development.ipynb
+# check which files are ignored: git status --ignored
 
+.venv/
+.vscode/
+.pre-commit-config.yaml
+howto/
+TODO.txt
+main.py
+setup.py
+
+# created by coverage
+htmlcov/
+
+# created by pytest
+__pycache__
+.pytest_cache/
+
+# created by coverage
+*.egg-info/
+.coverage
+
+# created by setuptools (python setup.py sdist bdist_wheel)
 dist/
-*.egg-info
+build/
+.egg-info/
 
-.ipynb_checkpoints/
-__pycache__/
+# created by build (python -m build)
+dist/
+.egg-info/
+
+# created by Jupyter Notebooks
+__pycache__
+.ipynb_checkpoints
