@@ -5,7 +5,6 @@
 .pre-commit-config.yaml
 howto/
 TODO.txt
-main.py
 setup.py
 
 # created by coverage
@@ -15,19 +14,13 @@ htmlcov/
 __pycache__
 .pytest_cache/
 
-# created by coverage
-*.egg-info/
-.coverage
-
 # created by setuptools (python setup.py sdist bdist_wheel)
 dist/
 build/
 .egg-info/
 
-# created by build (python -m build)
-dist/
-.egg-info/
-
 # created by Jupyter Notebooks
 __pycache__
 .ipynb_checkpoints
+
+NVcenter/data/logs/
