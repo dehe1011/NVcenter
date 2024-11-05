@@ -3,6 +3,8 @@ import numpy as np
 import qutip as q
 import scipy.constants as c
 
+# -------------------------------------------
+
 # ----------------- Change coordinate system -----------------------
 
 def cartesian_to_spherical(x, y, z, degree=False):
@@ -77,8 +79,8 @@ def get_dipolar_matrix(pos1, pos2, gamma1, gamma2):
         dipolar_matrix[i, j] = prefactor * (3 * S1_dot_n * S2_dot_n - S1_dot_S2)
     return dipolar_matrix # in Hz
 
-def calc_H_int(S1, S2, pos1, pos2, gamma1, gamma2):
-    H_int_list = [get_dipolar_matrix(pos1, pos2, gamma1, gamma2)[i,j] * S1[i+1] * S2[j+1] for i,j in product(range(3), repeat=2)]
+def calc_H_int(S1, S2, dipolar_matrix):
+    H_int_list = [dipolar_matrix[i,j] * S1[i+1] * S2[j+1] for i,j in product(range(3), repeat=2)]
     return sum(H_int_list)
 
 # ---------------------- Analysis of the density matrix -----------------------------

@@ -4,6 +4,8 @@ import qutip as q
 from .helpers import calc_fidelity 
 from .system import System
 
+# -------------------------------------------
+
 
 class Pulses:
     r""" This class 

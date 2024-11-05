@@ -1,9 +1,11 @@
 from itertools import product, combinations
 import random
 import numpy as np
-import qutip as q
 
-from src import spherical_to_cartesian
+from .. import DEFAULTS
+from .helpers import spherical_to_cartesian
+
+# -------------------------------------------
 
 class SpinConfig:
     """ This class gives the register and bath configurations (tuple of: spin_type, spin_pos, init_spin, kwargs) as well as system and mean-field configurations for different bath approximations.
@@ -30,7 +32,7 @@ class SpinConfig:
         self.bath_P1_seed = bath_P1_seed + 100  # change the seed to avoid any unwanted correlations in the random numbers, there are 12*self.bath_num_spins possible configurations
 
         # carbon properties 
-        self.a_C = 3.567e-10 # lattice constant for carbon
+        self.a_C = DEFAULTS['a_C'] # lattice constant for carbon
         self.V_unit = self.a_C**3 # volume of the unit cell
         self.N_unit = 8 # number of carbon atoms per unit cell
         self.n = self.N_unit/self.V_unit # density of carbon atoms

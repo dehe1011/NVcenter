@@ -4,6 +4,8 @@ import qutip as q
 from .helpers import get_dipolar_matrix, calc_H_int, adjust_space_dim
 from .spin import Spin
 
+# -------------------------------------------
+
 
 class System:
     r""" This class constructs the Hamiltonian (with interaction) and initial state from a given list of spin configurations for the system and mean-field part and diagonalizes the Hamiltonian. 
