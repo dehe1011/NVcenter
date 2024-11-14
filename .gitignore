@@ -7,9 +7,6 @@ howto/
 TODO.txt
 setup.py
 
-# created by coverage
-htmlcov/
-
 # created by pytest
 __pycache__
 .pytest_cache/
@@ -17,6 +14,10 @@ __pycache__
 # created by setuptools (python setup.py sdist bdist_wheel)
 dist/
 build/
+.egg-info/
+
+# created by build (python -m build)
+dist/
 .egg-info/
 
 # created by Jupyter Notebooks

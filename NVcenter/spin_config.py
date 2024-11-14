@@ -2,7 +2,7 @@ from itertools import product, combinations
 import random
 import numpy as np
 
-from .. import DEFAULTS
+from . import DEFAULTS
 from .helpers import spherical_to_cartesian
 
 # -------------------------------------------

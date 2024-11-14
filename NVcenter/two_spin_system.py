@@ -39,10 +39,9 @@ class TwoSpinSystem:
         self.times = np.linspace(0, time, int(time*1e6)*10)
 
         # Calculate Time Evolution
-        self.result = self._calc_dynamics()
-        self.observable_dict = self._calc_observable_dict()
-        self.spin_pops = self._calc_spin_pops()
-        
+        self.result = None
+        self.observable_dict = None
+        self.spin_pops = None        
 
     def _calc_H(self):
         """Calculate the Hamiltonian of the two-spin system."""
@@ -51,29 +50,37 @@ class TwoSpinSystem:
         return H1 + H2 + self.H_int
 
 
-    def _calc_dynamics(self):
+    def calc_dynamics(self):
         """Calculate the time evolution of the two-spin system using qutip.mesolve."""
-        result = q.mesolve(self.H, self.init_state, self.times).states
-        return result
+        if self.result is None:
+            self.result = q.mesolve(self.H, self.init_state, self.times).states
+        return self.result
 
 
-    def _calc_observable_dict(self):
+    def calc_observable_dict(self):
         """Calculate the expectation values of the spin operators for each time step. Used in plot_observables()."""
-        observable_keys = ['S1x', 'S1y', 'S1z', 'S2x', 'S2y', 'S2z']
-        observable_vals = [[q.expect(dm, op) for dm in self.result] for op in self.S1[1:]+self.S2[1:]]
-        return dict(zip(observable_keys, observable_vals))
+        self.calc_dynamics()
+        if self.observable_dict is None:
+            observable_keys = ['S1x', 'S1y', 'S1z', 'S2x', 'S2y', 'S2z']
+            observable_vals = [[q.expect(dm, op) for dm in self.result] for op in self.S1[1:]+self.S2[1:]]
+            self.observable_dict = dict(zip(observable_keys, observable_vals))
+        return self.observable_dict
 
 
-    def _calc_spin_pops(self):
+    def calc_spin_pops(self):
         """Calculate the populations of the spin states for each time step. Used in plot_pops()."""
-        spin1_pop = np.array([q.ptrace(dm, [0]).diag() for dm in self.result])
-        spin2_pop = np.array([q.ptrace(dm, [1]).diag() for dm in self.result])
-        return spin1_pop, spin2_pop
+        self.calc_dynamics()
+        if self.spin_pops is None:
+            spin1_pop = np.array([q.ptrace(dm, [0]).diag() for dm in self.result])
+            spin2_pop = np.array([q.ptrace(dm, [1]).diag() for dm in self.result])
+            self.spin_pops = spin1_pop, spin2_pop
+        return self.spin_pops
 
 
     def plot_observables(self, observable_keys, return_ax=False): 
         """Plot the expectation values of the spin operators."""       
         _, ax = plt.subplots()
+        self.calc_observable_dict()
 
         # plotting
         for observable_key in observable_keys:
@@ -89,6 +96,7 @@ class TwoSpinSystem:
     def plot_pops(self, return_ax=False):
         """Plot the populations of the spin states."""
         _, ax = plt.subplots()
+        self.calc_spin_pops()
 
         # plotting
         spin1_pop, spin2_pop = self.spin_pops

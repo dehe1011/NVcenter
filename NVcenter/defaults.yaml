@@ -1,0 +1,18 @@
+a_C: 3.567e-10  # m
+
+Bz: 148.e-4  # T = 148 G
+D_gs: 2.87e+9  # Hz
+P_gs: -5.08e+6  # Hz
+Nzz: 1.76e+6  # Hz
+
+m_N: -1
+
+Jahn_Teller_dict:  # Hz
+  '111': 114.e+6
+  '-111': 86.e+6
+  '1-11': 86.e+6
+  '11-1': 86.e+6
+
+gamma_e: -1.76e+11  # rad Hz/T
+gamma_C: 67.2828e+6  # rad Hz/T
+gamma_N: 19.331e+6  # rad Hz/T

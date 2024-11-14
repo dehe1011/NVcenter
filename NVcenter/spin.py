@@ -1,7 +1,7 @@
 import numpy as np
 import qutip as q
 
-from .. import DEFAULTS
+from . import DEFAULTS
 from .helpers import get_spin_matrices
 
 # -------------------------------------------

@@ -1,3 +1,5 @@
 qutip
 matplotlib
+
 notebook
+ipykernel
