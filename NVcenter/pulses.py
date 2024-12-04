@@ -66,7 +66,7 @@ class Pulses:
             pulse_list.append(U_rot)
             if not self.dynamical_decoupling: 
                 U_time = self.calc_U_time(self.time_list[i+1])
-            if self.dynamical_decoupling:
+            else:
                 U_time = self.calc_U_time(self.time_list[i+1]/2) * self.calc_U_pi() * self.calc_U_time(self.time_list[i+1]/2)
             pulse_list.append(U_time)
 

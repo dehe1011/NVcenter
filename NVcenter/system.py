@@ -38,8 +38,8 @@ class System:
                 if j>i:
                     S1 = self.S[i]
                     S2 = self.S[j]
-                    H += calc_H_int(S1, S2, spin1.spin_pos, spin2.spin_pos, spin1.gamma, spin2.gamma)
-                    gamma1, gamma2 = spin1.gamma, spin2.gamma
+                    dipolar_matrix = get_dipolar_matrix(spin1.spin_pos, spin2.spin_pos, spin1.gamma, spin2.gamma)
+                    H += calc_H_int(S1, S2, dipolar_matrix)
         return H
 
     def calc_H_mf(self):

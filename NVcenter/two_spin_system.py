@@ -8,7 +8,7 @@ from .spin import Spin
 # -------------------------------------------
 
 class TwoSpinSystem:
-    """ This class is designed to investigate the dynanamics between two spins interacting via the dipolar coupling of their magnetic moments. 
+    r""" This class is designed to investigate the dynanamics between two spins interacting via the dipolar coupling of their magnetic moments. 
     The class contains two plotting routines to plot the spin observables (Sx, Sy, Sz) and the population of the spins states for each spin. 
     
     Note:
@@ -36,12 +36,12 @@ class TwoSpinSystem:
         self.H2 = self.spin2.H # alternative: q.ptrace(self.H, [1])
 
         # Simulation time
-        self.times = np.linspace(0, time, int(time*1e6)*10)
+        self.times = np.linspace(0, time, int(time*1e6)*100)
 
         # Calculate Time Evolution
         self.result = None
         self.observable_dict = None
-        self.spin_pops = None        
+        self.spin_pops = None
 
     def _calc_H(self):
         """Calculate the Hamiltonian of the two-spin system."""
@@ -79,33 +79,37 @@ class TwoSpinSystem:
 
     def plot_observables(self, observable_keys, return_ax=False): 
         """Plot the expectation values of the spin operators."""       
-        _, ax = plt.subplots()
+        fig, ax = plt.subplots()
         self.calc_observable_dict()
 
         # plotting
+        times = self.times * 1e+6
         for observable_key in observable_keys:
             observable_val = self.observable_dict[observable_key]
-            ax.plot(self.times, np.real(observable_val), label=observable_key)
+            ax.plot(times, np.real(observable_val), label=observable_key)
 
         # plot settings
         ax.set_xlabel('Time (us)')
+        ax.set_title("Observables")
         ax.legend()
         if return_ax: return ax
 
 
     def plot_pops(self, return_ax=False):
         """Plot the populations of the spin states."""
-        _, ax = plt.subplots()
+        fig, ax = plt.subplots()
         self.calc_spin_pops()
 
         # plotting
         spin1_pop, spin2_pop = self.spin_pops
+        times = self.times * 1e+6
         for i in range(self.spin1.spin_dim):
-            ax.plot(self.times, spin1_pop[:, i], label=f"{self.spin1.spin_type}_{i}")
+            ax.plot(times, spin1_pop[:, i], label=f"{self.spin1.spin_type}_{i}")
         for i in range(self.spin2.spin_dim):
-            ax.plot(self.times, spin2_pop[:, i], label=f"{self.spin2.spin_type}_{i}")
+            ax.plot(times, spin2_pop[:, i], label=f"{self.spin2.spin_type}_{i}")
 
         # plot settings
         ax.set_xlabel('Time (us)')
+        ax.set_title("Populations")
         ax.legend()
         if return_ax: return ax
