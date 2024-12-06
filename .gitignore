@@ -5,7 +5,6 @@
 .pre-commit-config.yaml
 howto/
 TODO.txt
-setup.py
 
 # created by pytest
 __pycache__

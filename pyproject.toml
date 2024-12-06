@@ -1,6 +1,6 @@
 [project]
 name = "NVcenter"
-description = "A package for the project on NV centers in collaboartion with Dominik."
+description = "A package for the project on NV centers in collaboration with Dominik."
 readme = { file = "README.md", content-type = "text/markdown" }
 requires-python = ">=3.8"
 license = { text = "BSD-3-Clause" }

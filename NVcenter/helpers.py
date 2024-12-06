@@ -1,13 +1,17 @@
 from itertools import product
+
 import numpy as np
 import qutip as q
 import scipy.constants as c
+from scipy.optimize import fsolve
 
-# -------------------------------------------
 
-# ----------------- Change coordinate system -----------------------
+# ----------------- Spin Coordinates -----------------------
+
 
 def cartesian_to_spherical(x, y, z, degree=False):
+    """Converts cartesian to spherical coordinates."""
+
     r = np.sqrt(x**2 + y**2 + z**2)
     theta = np.arccos(z / r)
     phi = np.arctan2(y, x)
@@ -16,7 +20,10 @@ def cartesian_to_spherical(x, y, z, degree=False):
         theta = np.rad2deg(theta)
     return r, phi, theta
 
+
 def spherical_to_cartesian(r, phi, theta, degree=False):
+    """Converts spherical to cartesian coordinates."""
+
     if degree:
         phi = np.deg2rad(phi)
         theta = np.deg2rad(theta)
@@ -25,49 +32,90 @@ def spherical_to_cartesian(r, phi, theta, degree=False):
     z = r * np.cos(theta)
     return float(x), float(y), float(z)
 
-# ----------------- Spin matrices ---------------------------------
+
+def calc_spin_positions(Azz, Azx, gamma1, gamma2):
+    """Calculates the spin positions from the dipolar interaction constants.
+
+    Notes
+    -----
+        - C13 Position with couplings from Table V. in Zhang 2020
+        Azz, Azx in [[-0.152e6, 0.110e6], [-0.198e6, 0.328e6], [-0.228e6, 0.164e6], [-0.304e6, 0.247e6]]
+        - The positions are given in cartesian coordinates.
+        - It is assumed that the couplings are given in units of frequency (not angular frequency).
+        - Since Suter does not devide by 2pi, his coordinates get scaled by a factor np.cbrt(2*np.pi)=1.85.
+    """
+
+    # System of equations to solve
+    def equations(vars):
+        prefactor = -(c.hbar * c.mu_0) / (4 * np.pi) * gamma1 * gamma2 / (2 * np.pi)  #
+        r, theta = vars
+        eq1 = (prefactor / r**3) * (3 * np.cos(theta) ** 2 - 1) - Azz
+        eq2 = (prefactor / r**3) * (3 * np.cos(theta) * np.sin(theta)) - Azx
+        return [eq1, eq2]
+
+    initial_guess = [1e-10, np.pi / 2]
+    r, theta = fsolve(equations, initial_guess)
+    # r *= np.cbrt(2*np.pi) # uncomment this line to get the Suter coordinates
+    return spherical_to_cartesian(r, 0, theta)
+
+
+# ----------------- Spin Matrices ---------------------------------
+
 
 def get_spin_matrices(spin, trunc=False):
+    """Returns the spin matrices.
+    Notes:
+       - Includes prefactor, e.g., for spin-1/2 the returned matrices are Pauli matrices multiplied by 1/2.
+       - The identity matrix is included as the first element of the list.
     """
-    """
-    # spin matrices in natural units (energies become frequencies)
+
+    # natural units: energies become angular frequencies
     hbar = 1
+
+    # spin-1 matrices, e.g. for the full NV-center and nitrogen nuclear spin
     if spin == 1:
-        # spin-1 matrices for the full NV-center and nitrogen nuclear spin
         Sx = hbar * q.spin_Jx(1)
         Sy = hbar * q.spin_Jy(1)
         Sz = hbar * q.spin_Jz(1)
+
+        # truncated matrices, e.g. for the NV center reduced to a TLS
         if trunc:
-            # truncated matrices for the NV center: reduced to a TLS formed by the m_s = 0 and m_s = -1 state, neglecting the m_s = 1 state
-            return q.qeye(2), q.Qobj(Sx[1:,1:]), q.Qobj(Sy[1:,1:]), q.Qobj(Sz[1:,1:])
-        else:
-            return q.qeye(3), Sx, Sy, Sz
-            
-    if spin == 1/2:
-        # spin-1/2 matrices for the C-13 spin (Pauli matrices multiplied by 1/2)
-        sx = hbar * q.spin_Jx(1/2)
-        sy = hbar * q.spin_Jy(1/2)
-        sz = hbar * q.spin_Jz(1/2)
+            return q.qeye(2), q.Qobj(Sx[1:, 1:]), q.Qobj(Sy[1:, 1:]), q.Qobj(Sz[1:, 1:])
+
+        return q.qeye(3), Sx, Sy, Sz
+
+    # spin-1/2 matrices, e.g., for the C-13 nuclear spin
+    if spin == 1 / 2:
+        sx = hbar * q.spin_Jx(1 / 2)
+        sy = hbar * q.spin_Jy(1 / 2)
+        sz = hbar * q.spin_Jz(1 / 2)
         return q.qeye(2), sx, sy, sz
 
+
 def adjust_space_dim(num_spins, operator, position):
+    """Helper function to adjust the Hilbert space dimension of an operator to
+    the number of spins in the system."""
+
     operator_list = [q.qeye(2)] * num_spins
     operator_list[position] = operator
     return q.tensor(operator_list)
 
+
 # ------------------------ Magnetic dipolar interaction --------------------------------
 
+
 def get_dipolar_matrix(pos1, pos2, gamma1, gamma2):
-    r"""
+    """Returns the magnetic dipolar matrix for two spins.
     Notes:
-        Position must be in cartesian coordinates.
-        I think that this is only correct if we set $\hbar=1$, otherwise the expression should be divided by $2\pi$!
+        - Position must be in cartesian coordinates.
+        - Returns the frequency (not angular frequency). Nevertheless Suter considers this without division by 2pi
+        as frequency and later multiplies it by a factor of 2pi. I think this is not correct.
     """
-    r_vec = (np.array(pos1) - np.array(pos2))
-    r = np.linalg.norm( r_vec ) 
-    n_vec = r_vec/r
-    
-    prefactor = - (c.hbar * c.mu_0) / (4 * np.pi * r**3) * gamma1 * gamma2
+    r_vec = np.array(pos1) - np.array(pos2)
+    r = np.linalg.norm(r_vec)
+    n_vec = r_vec / r
+
+    prefactor = -(c.hbar * c.mu_0) / (4 * np.pi * r**3) * gamma1 * gamma2
 
     dipolar_matrix = np.zeros((3, 3))
     for i, j in product(range(3), repeat=2):
@@ -75,28 +123,39 @@ def get_dipolar_matrix(pos1, pos2, gamma1, gamma2):
         S1_dot_n = n_vec[i]
         S2_dot_n = n_vec[j]
         S1_dot_S2 = int(i == j)
-        
+
         dipolar_matrix[i, j] = prefactor * (3 * S1_dot_n * S2_dot_n - S1_dot_S2)
-    return dipolar_matrix # in Hz
+    return dipolar_matrix / (2 * np.pi)  # in 1/s
+
 
 def calc_H_int(S1, S2, dipolar_matrix):
-    H_int_list = [dipolar_matrix[i,j] * S1[i+1] * S2[j+1] for i,j in product(range(3), repeat=2)]
+    """Calculates the interaction Hamiltonian between two spins from the dipolar matrix."""
+
+    H_int_list = [
+        dipolar_matrix[i, j] * S1[i + 1] * S2[j + 1]
+        for i, j in product(range(3), repeat=2)
+    ]
     return sum(H_int_list)
+
 
 # ---------------------- Analysis of the density matrix -----------------------------
 
+
 def calc_logarithmic_negativity(rho, dim1=2, dim2=2):
-    """ Calculates the logarithmic negativity for a system of two qubits (performs the partial transpose wrt the second qubits). """
+    """Calculates the logarithmic negativity for a system of two qubits (i.e., the partial transpose wrt the second qubit)."""
+
     rho = rho.full()
     rho_pt = rho.copy()
     for i, j in product(range(dim1), repeat=2):
-        rho_pt[1+i*dim2, 0+j*dim2] = rho[0+i*dim2, 1+j*dim2]
-        rho_pt[0+i*dim2, 1+j*dim2] = rho[1+i*dim2, 0+j*dim2]
+        rho_pt[1 + i * dim2, 0 + j * dim2] = rho[0 + i * dim2, 1 + j * dim2]
+        rho_pt[0 + i * dim2, 1 + j * dim2] = rho[1 + i * dim2, 0 + j * dim2]
         # Note: for higher dimensions not only 0 and 1 have to be swapped
     eigv = np.linalg.eig(rho_pt)[0]
     trace_norm = sum(abs(eigv))
     return float(np.log2(trace_norm))
 
+
 def calc_fidelity(rho, rho_target):
-    """ Calculates the Fidelity. """
-    return np.real((rho_target.dag()*rho).tr() / (rho_target.dag()*rho_target).tr())
+    """Calculates the a simple measure of the fidelity as overlap between the quantum states."""
+
+    return np.real((rho_target.dag() * rho).tr() / (rho_target.dag() * rho_target).tr())

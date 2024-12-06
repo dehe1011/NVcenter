@@ -2,16 +2,25 @@ verbose: True
 
 # Carcon lattice constant 
 a_C: 3.567e-10  # m
+# Carbon atoms in the unit cell
+N_unit: 8 
+
+# NV center Lamor frequency
+omega_L: 0.5e+6  # Hz, used by Suter, must be converted to angular frequency!, I prefer -414.8 MHz as NV Lamor frequency
+
+gCCE2_distance: 55.e-9 # m
 
 # Magnetic field in [111] direction (NV center axis)
 Bz: 148.e-4  # T = 148 G
 
 # Zero-field splittings (ZFS)
 D_gs: 2.87e+9  # Hz
-P_gs: -5.08e+6  # Hz
+P_gs: -5.08e+6  # Hz, Dominik
+# P_gs: -4.96.e6 # Hz, Suter
 
 # Fermi contact interactions
 Nzz: 1.76e+6  # Hz
+A_N: -2.16e+6 # Hz, Suter
 m_N: -1
 
 # Jahn-Teller effect
