@@ -20,5 +20,6 @@ from .spin import *
 from .two_spin_system import *
 from .spins import *
 from .hamiltonian import *
+from .pulse import *
 
 from .suter import *
