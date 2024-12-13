@@ -5,6 +5,8 @@ import qutip as q
 import scipy.constants as c
 from scipy.optimize import fsolve
 
+from . import DEFAULTS
+
 
 # ----------------- Spin Coordinates -----------------------
 
@@ -31,32 +33,6 @@ def spherical_to_cartesian(r, phi, theta, degree=False):
     y = r * np.sin(theta) * np.sin(phi)
     z = r * np.cos(theta)
     return float(x), float(y), float(z)
-
-
-def calc_spin_positions(Azz, Azx, gamma1, gamma2):
-    """Calculates the spin positions from the dipolar interaction constants.
-
-    Notes
-    -----
-        - C13 Position with couplings from Table V. in Zhang 2020
-        Azz, Azx in [[-0.152e6, 0.110e6], [-0.198e6, 0.328e6], [-0.228e6, 0.164e6], [-0.304e6, 0.247e6]]
-        - The positions are given in cartesian coordinates.
-        - It is assumed that the couplings are given in units of frequency (not angular frequency).
-        - Since Suter does not devide by 2pi, his coordinates get scaled by a factor np.cbrt(2*np.pi)=1.85.
-    """
-
-    # System of equations to solve
-    def equations(vars):
-        prefactor = -(c.hbar * c.mu_0) / (4 * np.pi) * gamma1 * gamma2 / (2 * np.pi)  #
-        r, theta = vars
-        eq1 = (prefactor / r**3) * (3 * np.cos(theta) ** 2 - 1) - Azz
-        eq2 = (prefactor / r**3) * (3 * np.cos(theta) * np.sin(theta)) - Azx
-        return [eq1, eq2]
-
-    initial_guess = [1e-10, np.pi / 2]
-    r, theta = fsolve(equations, initial_guess)
-    # r *= np.cbrt(2*np.pi) # uncomment this line to get the Suter coordinates
-    return spherical_to_cartesian(r, 0, theta)
 
 
 # ----------------- Spin Matrices ---------------------------------
@@ -104,7 +80,7 @@ def adjust_space_dim(num_spins, operator, position):
 # ------------------------ Magnetic dipolar interaction --------------------------------
 
 
-def get_dipolar_matrix(pos1, pos2, gamma1, gamma2):
+def get_dipolar_matrix(pos1, pos2, gamma1, gamma2, suter_method=False):
     """Returns the magnetic dipolar matrix for two spins.
     Notes:
         - Position must be in cartesian coordinates.
@@ -115,7 +91,10 @@ def get_dipolar_matrix(pos1, pos2, gamma1, gamma2):
     r = np.linalg.norm(r_vec)
     n_vec = r_vec / r
 
-    prefactor = -(c.hbar * c.mu_0) / (4 * np.pi * r**3) * gamma1 * gamma2
+    if suter_method:
+        prefactor = -(c.h * c.mu_0) / (4 * np.pi * r**3) * gamma1 * gamma2
+    else:
+        prefactor = -(c.hbar * c.mu_0) / (4 * np.pi * r**3) * gamma1 * gamma2
 
     dipolar_matrix = np.zeros((3, 3))
     for i, j in product(range(3), repeat=2):
@@ -125,7 +104,43 @@ def get_dipolar_matrix(pos1, pos2, gamma1, gamma2):
         S1_dot_S2 = int(i == j)
 
         dipolar_matrix[i, j] = prefactor * (3 * S1_dot_n * S2_dot_n - S1_dot_S2)
+
     return dipolar_matrix / (2 * np.pi)  # in 1/s
+
+
+def calc_spin_positions(Azz, Azx, gamma1, gamma2, suter_method=False):
+    """Calculates the spin positions from the dipolar interaction constants.
+
+    Notes
+    -----
+        - C13 Position with couplings from Table V. in Zhang 2020
+        Azz, Azx in [[-0.152e6, 0.110e6], [-0.198e6, 0.328e6], [-0.228e6, 0.164e6], [-0.304e6, 0.247e6]]
+        - The positions are given in cartesian coordinates.
+        - It is assumed that the couplings are given in units of frequency (not angular frequency).
+        - Since Suter does not devide by 2pi (he uses $h$ instead of $\hbar$), his coordinates get scaled by a factor np.cbrt(2*np.pi)=1.85.
+    """
+
+    # System of equations to solve
+    def equations(vars):
+        if suter_method:
+            prefactor = -(c.h * c.mu_0) / (4 * np.pi) * gamma1 * gamma2 / (2 * np.pi)
+        else:
+            prefactor = -(c.hbar * c.mu_0) / (4 * np.pi) * gamma1 * gamma2 / (2 * np.pi)  #
+        r, theta = vars
+        eq1 = (prefactor / r**3) * (3 * np.cos(theta) ** 2 - 1) - Azz
+        eq2 = (prefactor / r**3) * (3 * np.cos(theta) * np.sin(theta)) - Azx
+        return [eq1, eq2]
+
+    initial_guess = [1e-10, np.pi / 2]
+    r, theta = fsolve(equations, initial_guess)
+    pos = spherical_to_cartesian(r, 0, theta)
+    dipolar_matrix = get_dipolar_matrix((0,0,0), pos, gamma1, gamma2, suter_method=suter_method)
+    if DEFAULTS['verbose']:
+        print(dipolar_matrix)
+    if np.allclose([dipolar_matrix[2, 2], dipolar_matrix[2, 0]], [Azz, Azx]):
+        return pos
+    else:
+        return None
 
 
 def calc_H_int(S1, S2, dipolar_matrix):
@@ -158,4 +173,4 @@ def calc_logarithmic_negativity(rho, dim1=2, dim2=2):
 def calc_fidelity(rho, rho_target):
     """Calculates the a simple measure of the fidelity as overlap between the quantum states."""
 
-    return np.real((rho_target.dag() * rho).tr() / (rho_target.dag() * rho_target).tr())
+    return np.abs((rho_target.dag() * rho).tr() / (rho_target.dag() * rho_target).tr())

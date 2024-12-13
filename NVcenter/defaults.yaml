@@ -1,36 +1,50 @@
+# Note: unit Hz means frequency, not angular frequency
+
 verbose: True
 
-# Carcon lattice constant 
-a_C: 3.567e-10  # m
-# Carbon atoms in the unit cell
-N_unit: 8 
+thermal_bath: True
+suter_method: False
+approx_level: 'no_bath'
+pulse_seq: [0]
+old_state: None
+dynamical_decoupling: False
+instant_pulses: False
+env_approx_level: 'no_bath'
 
-# NV center Lamor frequency
-omega_L: 0.5e+6  # Hz, used by Suter, must be converted to angular frequency!, I prefer -414.8 MHz as NV Lamor frequency
+# NV center Rabi frequency
+rabi_frequency: 0.5e+6  # Hz, used by Suter
 
-gCCE2_distance: 55.e-9 # m
+# P1 center gCCE2 radius
+gCCE2_distance: 55.e-9 # m, used by Dominik
 
-# Magnetic field in [111] direction (NV center axis)
-Bz: 148.e-4  # T = 148 G
 
-# Zero-field splittings (ZFS)
-D_gs: 2.87e+9  # Hz
-P_gs: -5.08e+6  # Hz, Dominik
-# P_gs: -4.96.e6 # Hz, Suter
+constants:
+  # Carcon lattice constant 
+  a_C: 3.567e-10  # m
+  # Carbon atoms in the unit cell
+  N_unit: 8 
 
-# Fermi contact interactions
-Nzz: 1.76e+6  # Hz
-A_N: -2.16e+6 # Hz, Suter
-m_N: -1
+  # Magnetic field in [111] direction (NV center axis)
+  Bz: 148.e-4  # T = 148 G
 
-# Jahn-Teller effect
-Jahn_Teller_dict:
-  '111': 114.e+6 # Hz
-  '-111': 86.e+6 # Hz
-  '1-11': 86.e+6 # Hz
-  '11-1': 86.e+6 # Hz
+  # Zero-field splittings (ZFS)
+  D_gs: 2.87e+9  # Hz
+  P_gs: -5.08e+6  # Hz, Dominik
+  # P_gs: -4.96.e6 # Hz, Suter
 
-# Gyromagnetic ratios
-gamma_e: -1.76e+11  # rad Hz/T
-gamma_C: 67.2828e+6  # rad Hz/T
-gamma_N: 19.331e+6  # rad Hz/T
+  # Fermi contact interactions
+  Nzz: 1.76e+6  # Hz
+  A_N: -2.16e+6 # Hz, Suter
+  m_N: -1
+
+  # Jahn-Teller effect
+  Jahn_Teller_dict:
+    '111': 114.e+6 # Hz
+    '-111': 86.e+6 # Hz
+    '1-11': 86.e+6 # Hz
+    '11-1': 86.e+6 # Hz
+
+  # Gyromagnetic ratios
+  gamma_e: -1.76e+11  # rad Hz/T
+  gamma_C: 67.2828e+6  # rad Hz/T
+  gamma_N: 19.331e+6  # rad Hz/T

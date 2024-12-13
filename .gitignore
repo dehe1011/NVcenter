@@ -1,6 +1,7 @@
 # check which files are ignored: git status --ignored
 
 .venv/
+.delete/
 .vscode/
 .pre-commit-config.yaml
 howto/

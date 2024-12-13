@@ -1,7 +1,7 @@
 import numpy as np
 import qutip as q
 
-from . import DEFAULTS
+from . import CONST
 from .helpers import adjust_space_dim, get_dipolar_matrix
 from .spin_bath import SpinBath
 from .spins import Spins
@@ -55,8 +55,8 @@ def calc_hadamard_pulse_seq(C13_pos):
     )
     A_zz = dipolar_matrix[2, 2]
     A_zx = dipolar_matrix[0, 2]
-    ve = DEFAULTS["gamma_e"] * DEFAULTS["Bz"] / (2 * np.pi)
-    vc = DEFAULTS["gamma_C"] * DEFAULTS["Bz"] / (2 * np.pi)
+    ve = CONST["gamma_e"] * CONST["Bz"] / (2 * np.pi)
+    vc = CONST["gamma_C"] * CONST["Bz"] / (2 * np.pi)
 
     v_minus = np.sqrt(A_zx**2 + (vc + A_zz) ** 2)
     k_minus = np.arctan2(A_zx, (A_zz + vc))

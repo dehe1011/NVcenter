@@ -14,17 +14,14 @@ def load_yaml(filepath):
         data = yaml.safe_load(file)
     return data
 
-
 def get_defaults():
     """Load the default values from the defaults.yaml file."""
-
     filepath = os.path.join(ROOT_DIR, PROJECT_NAME, "defaults.yaml")
     return load_yaml(filepath)
 
-
 # Load the default values
 DEFAULTS = get_defaults()
-
+CONST = DEFAULTS["constants"]
 
 def load_json(filepath):
     """Load a json file and return the data."""

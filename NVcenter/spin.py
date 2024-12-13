@@ -1,7 +1,7 @@
 import numpy as np
 import qutip as q
 
-from . import DEFAULTS
+from . import CONST
 from .helpers import get_spin_matrices
 
 # -------------------------------------------
@@ -26,7 +26,7 @@ class Spin:
         self.kwargs = kwargs
 
         # Magnetic field in [111] direction of the NV center
-        self.Bz = DEFAULTS["Bz"]
+        self.Bz = CONST["Bz"]
 
         # --------------------------------------------
 
@@ -35,15 +35,15 @@ class Spin:
             self.spin_dim = 2
 
             # Zero-field splitting
-            self.D_gs = DEFAULTS["D_gs"]
+            self.D_gs = CONST["D_gs"]
             # Zeeman splitting
-            self.gamma = DEFAULTS["gamma_e"]
+            self.gamma = CONST["gamma_e"]
             self.lamor = self.gamma * self.Bz / (2 * np.pi)  # -414.8 MHz
 
             # Frozen nitrogen spin
-            self.Nzz = DEFAULTS["Nzz"]  # Dominik, Fermi contact contribution
-            self.A_N = DEFAULTS["A_N"]  # Suter
-            self.m_N = DEFAULTS["m_N"]  # frozen spin state of the nitrogen
+            self.Nzz = CONST["Nzz"]  # Dominik, Fermi contact contribution
+            self.A_N = CONST["A_N"]  # Suter
+            self.m_N = CONST["m_N"]  # frozen spin state of the nitrogen
             renormalization = self.m_N * self.A_N
 
             # Spin operators
@@ -52,11 +52,14 @@ class Spin:
             )  # truncated to m_s = 0 and m_s = -1
 
             # Hamiltonian
-            self.H = (
-                self.D_gs * self.S[3] ** 2
-                - self.lamor * self.S[3]
-                + renormalization * self.S[3]
-            )
+            # self.H = (
+            #     self.D_gs * self.S[3] ** 2
+            #     - self.lamor * self.S[3]
+            #     + renormalization * self.S[3]
+            # )
+
+            # The NV center transition is only driven by the microwave field from outside causing the Rabi oscillations
+            self.H = q.Qobj([[0,0],[0,0]])
 
         # --------------------------------------------
 
@@ -65,7 +68,7 @@ class Spin:
             self.spin_dim = 2
 
             # Zeeman splitting
-            self.gamma = DEFAULTS["gamma_C"]
+            self.gamma = CONST["gamma_C"]
             self.lamor = self.gamma * self.Bz / (2 * np.pi)  # 158.5 kHz
 
             # Spin operators
@@ -84,11 +87,11 @@ class Spin:
             self.spin_dim = 2
 
             # Zeeman splitting
-            self.gamma = DEFAULTS["gamma_e"]
+            self.gamma = CONST["gamma_e"]
             self.lamor = self.gamma * self.Bz / (2 * np.pi)  # -414.8 MHz
 
             # Lamor frequency disorder (due to Jahn Teller effect and nitrgen spin)
-            self.Jahn_Teller_dict = DEFAULTS["Jahn_Teller_dict"]
+            self.Jahn_Teller_dict = CONST["Jahn_Teller_dict"]
             self.lamor_disorder = (
                 self.kwargs["nitrogen_spin"]
                 * self.Jahn_Teller_dict[self.kwargs["axis"]]
@@ -106,14 +109,14 @@ class Spin:
             self.spin_dim = 3
 
             # Zero-field splitting
-            self.D_gs = DEFAULTS["D_gs"]
+            self.D_gs = CONST["D_gs"]
             # Zeeman splitting
-            self.gamma = DEFAULTS["gamma_e"]
+            self.gamma = CONST["gamma_e"]
             self.lamor = self.gamma * self.Bz / (2 * np.pi)  # -414.8 MHz
 
             # Nitrogen Fermi contact contribution
-            self.Nzz = DEFAULTS["Nzz"]
-            self.m_N = DEFAULTS["m_N"]  # frozen spin state of the nitrogen
+            self.Nzz = CONST["Nzz"]
+            self.m_N = CONST["m_N"]  # frozen spin state of the nitrogen
             renormalization = self.m_N * self.Nzz
 
             # Spin operators
@@ -132,9 +135,9 @@ class Spin:
             self.spin_dim = 3
 
             # Zero-field splitting
-            self.P_gs = DEFAULTS["P_gs"]
+            self.P_gs = CONST["P_gs"]
             # Zeeman splitting
-            self.gamma = DEFAULTS["gamma_N"]
+            self.gamma = CONST["gamma_N"]
             self.lamor = self.gamma * self.Bz / (2 * np.pi)  # 45.5kHz
 
             # Spin matrices

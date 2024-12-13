@@ -32,40 +32,33 @@ class Spins:
     def __init__(self, register_config, bath_config, approx_level):
         self.approx_level = approx_level
 
-        # register
+        # register porperties
         self.register_config = register_config
         self.register_num_spins = len(self.register_config)
-        self.register_config_unzipped = list(zip(*self.register_config))
-        self.register_spin_types = self.register_config_unzipped[0]
-        self.register_spin_pos = self.register_config_unzipped[1]
-        self.register_init_spin = self.register_config_unzipped[2]
-        self.register_spins = [
-            Spin(*spin_config) for spin_config in self.register_config
-        ]
+        self.register_spin_types, self.register_spin_pos, self.register_init_spin, _ = list(zip(*register_config))
 
-        # bath
+        # bath properties
         self.bath_config = bath_config
         self.bath_num_spins = len(self.bath_config)
-        self.bath_config_unzipped = list(zip(*self.bath_config))
-        self.bath_spin_types = self.bath_config_unzipped[0]
-        self.bath_spin_pos = self.bath_config_unzipped[1]
-        self.bath_init_spin = self.bath_config_unzipped[2]
+        self.bath_spin_types, self.bath_spin_pos, self.bath_init_spin, _ = list(zip(*bath_config))
+
+        # list of instances of Spin class (for each spin in the register and bath)
+        self.register_spins = [Spin(*spin_config) for spin_config in self.register_config]
         self.bath_spins = [Spin(*spin_config) for spin_config in self.bath_config]
 
-        # system and mean-field configurations
+        # indices of bath spins that are simulated exactly in the corresponding gCCE approximation
+        # we exclude P1 centers too far apart to interact significantly
         self.idx_gCCE1 = list(range(self.bath_num_spins))
-        # some bath spins are so far that they don't interact significantly, so we exclude them
+        self.gCCE2_distance = DEFAULTS["gCCE2_distance"]
         self.idx_gCCE2 = self.get_idx_gCCE2()
 
-        self.system_config_list, self.mf_config_list = self.get_config_lists()
+        # lists of lists of instances of Spin class (for each spin in each system and mean-field configuration)
         self.system_spins_list, self.mf_spins_list = self.get_spins_lists()
-
-        self.system_num_spins = len(list(self.system_config_list.values())[0])
-        self.mf_num_spins = len(list(self.mf_config_list.values())[0])
+        self.system_num_spins = len(self.system_spins_list[0])
+        self.mf_num_spins = len(self.mf_spins_list[0])
 
     # -------------------------------------------------
 
-    # split register and bath into system and mean-field part
     def get_idx_gCCE2(self):
         """Returns indices of interacting P1 centers in the bath with a distance less than 55nm
         since for larger distances the interaction can be neglected and does not give a contribution
@@ -84,8 +77,7 @@ class Spins:
                 distance_P1 = np.linalg.norm(
                     np.array(self.bath_spin_pos[i]) - np.array(self.bath_spin_pos[j])
                 )
-                gCCE2_distance = DEFAULTS["gCCE2_distance"]
-                if distance_NV < gCCE2_distance and distance_P1 < gCCE2_distance:
+                if distance_NV < self.gCCE2_distance and distance_P1 < self.gCCE2_distance:
                     idx_gCCE2.append((i, j))
             return idx_gCCE2
 
@@ -133,6 +125,7 @@ class Spins:
 
     def get_spins_lists(self):
         """Returns the system and mean-field spins needed to set up the Hamiltonian for different approximation levels."""
+        
         system_spins_list, mf_spins_list = [], []
 
         if self.approx_level == "no_bath":
