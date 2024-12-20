@@ -37,7 +37,7 @@ def H_Suter():
     return H
 
 
-def calc_hadamard_pulse_seq(C13_pos):
+def calc_hadamard_pulse_seq(C13_pos, suter_method=False):
     """Analytical way to prepare a superopsition state (not a gate!) assuming instananeous pulses
     as described in the Supplementary of Hedge2020.
     """
@@ -51,7 +51,7 @@ def calc_hadamard_pulse_seq(C13_pos):
 
     spin1, spin2 = spins.register_spins
     dipolar_matrix = get_dipolar_matrix(
-        spin1.spin_pos, spin2.spin_pos, spin1.gamma, spin2.gamma
+        spin1.spin_pos, spin2.spin_pos, spin1.gamma, spin2.gamma, suter_method=suter_method
     )
     A_zz = dipolar_matrix[2, 2]
     A_zx = dipolar_matrix[0, 2]

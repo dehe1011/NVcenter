@@ -44,7 +44,7 @@ class Spin:
             self.Nzz = CONST["Nzz"]  # Dominik, Fermi contact contribution
             self.A_N = CONST["A_N"]  # Suter
             self.m_N = CONST["m_N"]  # frozen spin state of the nitrogen
-            renormalization = self.m_N * self.A_N
+            renormalization = self.m_N * self.Nzz
 
             # Spin operators
             self.S = get_spin_matrices(
@@ -52,14 +52,14 @@ class Spin:
             )  # truncated to m_s = 0 and m_s = -1
 
             # Hamiltonian
-            # self.H = (
-            #     self.D_gs * self.S[3] ** 2
-            #     - self.lamor * self.S[3]
-            #     + renormalization * self.S[3]
-            # )
+            self.H = (
+                self.D_gs * self.S[3] ** 2
+                - self.lamor * self.S[3]
+                + renormalization * self.S[3]
+            )
 
             # The NV center transition is only driven by the microwave field from outside causing the Rabi oscillations
-            self.H = q.Qobj([[0,0],[0,0]])
+            # self.H = q.Qobj([[0,0],[0,0]])
 
         # --------------------------------------------
 

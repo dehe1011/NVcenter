@@ -8,8 +8,11 @@ approx_level: 'no_bath'
 pulse_seq: [0]
 old_state: None
 dynamical_decoupling: False
+mode: 'state_preparation'
 instant_pulses: False
 env_approx_level: 'no_bath'
+dm_offset: 1.e-8
+num_hahn_echos: 0
 
 # NV center Rabi frequency
 rabi_frequency: 0.5e+6  # Hz, used by Suter
@@ -28,12 +31,12 @@ constants:
   Bz: 148.e-4  # T = 148 G
 
   # Zero-field splittings (ZFS)
-  D_gs: 2.87e+9  # Hz
+  D_gs: 2.88e+9 # 2.87e+9  # Hz
   P_gs: -5.08e+6  # Hz, Dominik
-  # P_gs: -4.96.e6 # Hz, Suter
+  # P_gs: -4.96.e+6 # Hz, Suter
 
   # Fermi contact interactions
-  Nzz: 1.76e+6  # Hz
+  Nzz: -1.76e+6  # Hz
   A_N: -2.16e+6 # Hz, Suter
   m_N: -1
 
@@ -45,6 +48,6 @@ constants:
     '11-1': 86.e+6 # Hz
 
   # Gyromagnetic ratios
-  gamma_e: -1.76e+11  # rad Hz/T
-  gamma_C: 67.2828e+6  # rad Hz/T
+  gamma_e: -1.761176842e+11 # -1.76e+11  # rad Hz/T
+  gamma_C: 67.29291464e+6 # 67.2828e+6  # rad Hz/T
   gamma_N: 19.331e+6  # rad Hz/T

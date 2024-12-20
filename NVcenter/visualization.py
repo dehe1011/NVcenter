@@ -2,7 +2,7 @@ import qutip as q
 import numpy as np
 import matplotlib.pyplot as plt
 
-def plot_pops(t_list, new_states):
+def plot_pops(t_list, new_states, pulse_time=None):
 
     t_list = 1e6 * np.array(t_list)
 
@@ -27,10 +27,19 @@ def plot_pops(t_list, new_states):
     ax[0].set_ylim(0, 1.02)
     ax[1].set_ylim(0, 1.02)
 
+    if pulse_time is not None:
+        pulse_time *= 1e6
+        y1 = np.full_like(t_list, 0)
+        y2 = np.full_like(t_list, 1)
+        ax[0].axvline(pulse_time, color='black', linestyle='--', label=r'$t_e$')
+        ax[1].axvline(pulse_time, color='black', linestyle='--', label=r'$t_e$')
+        ax[0].fill_between(t_list, y1, y2, where=(t_list >= 0) & (t_list <= pulse_time), color='lightgrey', alpha=0.5)
+        ax[1].fill_between(t_list, y1, y2, where=(t_list >= 0) & (t_list <= pulse_time), color='lightgrey', alpha=0.5)
+
     return fig, ax
 
 
-def plot_exp_values(t_list, new_states):
+def plot_exp_values(t_list, new_states, pulse_time=None):
 
     t_list = 1e6 * np.array(t_list)
 
@@ -55,10 +64,19 @@ def plot_exp_values(t_list, new_states):
     # ax[0].set_ylim(-1.02, 1.02) # for coherence
     ax[1].set_ylim(-1.02, 1.02)
 
+    if pulse_time is not None:
+        pulse_time *= 1e6
+        y1 = np.full_like(t_list, -1)
+        y2 = np.full_like(t_list, 1)
+        ax[0].axvline(pulse_time, color='black', linestyle='--', label=r'$t_e$')
+        ax[1].axvline(pulse_time, color='black', linestyle='--', label=r'$t_e$')
+        ax[0].fill_between(t_list, y1, y2, where=(t_list >= 0) & (t_list <= pulse_time), color='lightgrey', alpha=0.5)
+        ax[1].fill_between(t_list, y1, y2, where=(t_list >= 0) & (t_list <= pulse_time), color='lightgrey', alpha=0.5)
+
     return fig, ax
 
 
-def plot_fids(t_list, fidelities):
+def plot_fids(t_list, fidelities, pulse_time=None):
     fig, ax = plt.subplots(figsize=(6.4, 4.8))
     t_list = 1e6 * np.array(t_list)
     ax.plot(t_list, fidelities)
@@ -68,10 +86,17 @@ def plot_fids(t_list, fidelities):
     ax.set_xlabel(r'Time [$\mu$s]')
     ax.set_ylim(0,1.02)
 
+    if pulse_time is not None:
+        pulse_time *= 1e6
+        y1 = np.full_like(t_list, 0)
+        y2 = np.full_like(t_list, 1)
+        ax.axvline(pulse_time, color='black', linestyle='--', label=r'$t_e$')
+        ax.fill_between(t_list, y1, y2, where=(t_list >= 0) & (t_list <= pulse_time), color='lightgrey', alpha=0.5)
+
     return fig, ax 
 
 
-def plot_log_negativity(t_list, log_negativities):
+def plot_log_negativity(t_list, log_negativities, pulse_time=None):
     fig, ax = plt.subplots(figsize=(6.4, 4.8))
     t_list = 1e6 * np.array(t_list)
     ax.plot(t_list, log_negativities)
@@ -80,5 +105,12 @@ def plot_log_negativity(t_list, log_negativities):
     ax.set_ylabel('Logarithmic Negativity $E_N$')
     ax.set_xlabel(r'Time [$\mu$s]')
     ax.set_ylim(0,1.02)
+
+    if pulse_time is not None:
+        pulse_time *= 1e6
+        y1 = np.full_like(t_list, 0)
+        y2 = np.full_like(t_list, 1)
+        ax.axvline(pulse_time, color='black', linestyle='--', label=r'$t_e$')
+        ax.fill_between(t_list, y1, y2, where=(t_list >= 0) & (t_list <= pulse_time), color='lightgrey', alpha=0.5)
 
     return fig, ax 

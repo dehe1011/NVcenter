@@ -134,10 +134,9 @@ class Hamiltonian(Spins):
                     )
 
                     # the NV spin is not flipped by the surrounding spins 
-                    if spin1.spin_type == "NV":
-                        dipolar_matrix[0, :] = [0, 0, 0]
-                        dipolar_matrix[1, :] = [0, 0, 0]
-
+                    # if spin1.spin_type == "NV":
+                    #     dipolar_matrix[0, :] = [0, 0, 0]
+                    #     dipolar_matrix[1, :] = [0, 0, 0]
                     H += calc_H_int(spin_op1, spin_op2, dipolar_matrix)
         return H
 

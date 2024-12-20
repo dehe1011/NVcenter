@@ -7,6 +7,27 @@ from .helpers import calc_fidelity
 
 # ----------------------------------------------
 
+def numpyfy(states_list_full):
+    """ Helper function to convert the states from QuTiP objects to numpy arrays needed in the gCCE formula. """
+
+    return [[state.full() for state in states] for states in states_list_full]
+
+def get_observation(state):
+    """ Helper function to get the observation of a quantum state. """
+
+    reshaped_state = state.full().flatten()
+    return np.concatenate([np.real(reshaped_state), np.imag(reshaped_state)])
+
+def get_state(observation, dims):
+    """ Helper function to get the quantum state from an observation. """
+
+    length = len(observation)
+    real_part = observation[:length//2]
+    imag_part = observation[length//2:]
+    return q.Qobj(real_part, dims=dims) + 1j*q.Qobj(imag_part, dims=dims)  
+
+# ---------------------------------------------- 
+
 class Environment(Pulse):
     def __init__(self, register_config, bath_configs, **kwargs):
 
@@ -16,28 +37,76 @@ class Environment(Pulse):
         self.num_bath_configs = len(bath_configs)
         self.env_approx_level = kwargs.get('env_approx_level', DEFAULTS['env_approx_level'])
         self.kwargs = kwargs
+        
+        self.max_steps = 3
+        self.infidelity_threshold = 0.001
+        self.dims = self.register_init_state.dims
 
-    # ----------------------------------------------
+        self.count = 0
+        self.fidelity = calc_fidelity(self.old_state, self.target)
+        self.info = {'Fidelity': self.fidelity}
+        self.reward = 0
+        self.observation = get_observation(self.old_state)
+        self.done = False
 
-    def numpyfy(self, states_list_full):
-        """ Helper function to convert the states from QuTiP objects to numpy arrays needed in the gCCE formula. """
-
-        return [[state.full() for state in states] for states in states_list_full]
+        # from gymnasium import spaces
+        # self.action_space = spaces.Box(low=0, high= 1, shape=(3,), dtype=np.float32)
+        # self.observation_space = spaces.Box(low=-1, high=1, shape=(32,), dtype=np.float64)
     
     # ----------------------------------------------
-    
-    def step(self, pulse_seq):
+
+    def step(self, action):
         """ Apply the pulse sequence to the current state of the environment and 
-        return the new state and fidelity. """
+        return the new observation and reward. """
+        
+        if self.done:
+            if DEFAULTS['verbose']:
+                print("episode done")
+            self.reset()
+        else:
+            self.count += 1
 
+        if self.instant_pulses:
+            pulse_seq = [ action[0], 0, 2*np.pi*action[1], 2*np.pi*action[2]] 
+        else:
+            pulse_seq = [ action[0], 0, action[1], 2*np.pi*action[2]] 
+        
         new_state = self.get_new_states(pulse_seq)[0]
-        fidelity = calc_fidelity(new_state, self.target)
+        self.fidelity = calc_fidelity(new_state, self.target)
         self.old_state = new_state
-        return new_state, fidelity
+
+        # observation
+        self.observation = get_observation(self.old_state)
+
+        # done
+        if (self.count == self.max_steps):
+            if DEFAULTS['verbose']:
+                print()
+            self.done = True
+        if 1-self.fidelity < self.infidelity_threshold:
+            self.done = True
+
+        # reward
+        if self.done:
+            self.reward =  -np.log(1-self.fidelity) #-0.05*self.count
+        else:
+            self.reward = 0
+
+        # info
+        self.info = {'Fidelity': self.fidelity}
+
+        return (self.observation, self.reward, self.done, self.info)
     
     def reset(self):
         """ Reset the environment to the initial state before any pulses were applied. """	
         super().__init__(self.register_config, self.bath_configs[0], **self.kwargs)
+
+        self.count = 0
+        self.fidelity = calc_fidelity(self.old_state, self.target)
+        self.info = {'Fidelity': self.fidelity}
+        self.reward = 0
+        self.observation = get_observation(self.old_state)
+        self.done = False
     
     # ----------------------------------------------
     
@@ -131,7 +200,7 @@ class Environment(Pulse):
              #gCCE0 initialization
             self.approx_level = 'gCCE0'
             states_full_gCCE0 = self.calc_new_states_full(t_list)
-            states_full_gCCE0 = self.numpyfy(states_full_gCCE0)
+            states_full_gCCE0 = numpyfy(states_full_gCCE0)
             states_gCCE0 = states_full_gCCE0[0]
 
             states_gCCE = states_gCCE0
@@ -144,7 +213,7 @@ class Environment(Pulse):
             # gCCE1 initialization
             self.approx_level = 'gCCE1'
             states_full_gCCE1 = self.calc_new_states_full(t_list)
-            states_full_gCCE1 = self.numpyfy(states_full_gCCE1)
+            states_full_gCCE1 = numpyfy(states_full_gCCE1)
 
             # gCCE1 formula
             for i, _ in enumerate(self.idx_gCCE1):
@@ -158,7 +227,7 @@ class Environment(Pulse):
             # gCCE2 initialization
             self.approx_level = 'gCCE2'
             states_full_gCCE2 = self.calc_new_states_full(t_list)
-            states_full_gCCE2 = self.numpyfy(states_full_gCCE2)
+            states_full_gCCE2 = numpyfy(states_full_gCCE2)
 
             # gCCE2 formula
             for i, idx_gCCE2 in enumerate(self.idx_gCCE2):

@@ -104,7 +104,6 @@ def get_dipolar_matrix(pos1, pos2, gamma1, gamma2, suter_method=False):
         S1_dot_S2 = int(i == j)
 
         dipolar_matrix[i, j] = prefactor * (3 * S1_dot_n * S2_dot_n - S1_dot_S2)
-
     return dipolar_matrix / (2 * np.pi)  # in 1/s
 
 

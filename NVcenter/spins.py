@@ -40,17 +40,20 @@ class Spins:
         # bath properties
         self.bath_config = bath_config
         self.bath_num_spins = len(self.bath_config)
-        self.bath_spin_types, self.bath_spin_pos, self.bath_init_spin, _ = list(zip(*bath_config))
+        if self.bath_num_spins > 0:
+            self.bath_spin_types, self.bath_spin_pos, self.bath_init_spin, _ = list(zip(*bath_config))
 
         # list of instances of Spin class (for each spin in the register and bath)
         self.register_spins = [Spin(*spin_config) for spin_config in self.register_config]
-        self.bath_spins = [Spin(*spin_config) for spin_config in self.bath_config]
+        if self.bath_num_spins > 0:
+            self.bath_spins = [Spin(*spin_config) for spin_config in self.bath_config]
 
         # indices of bath spins that are simulated exactly in the corresponding gCCE approximation
         # we exclude P1 centers too far apart to interact significantly
-        self.idx_gCCE1 = list(range(self.bath_num_spins))
-        self.gCCE2_distance = DEFAULTS["gCCE2_distance"]
-        self.idx_gCCE2 = self.get_idx_gCCE2()
+        if self.bath_num_spins > 0:
+            self.idx_gCCE1 = list(range(self.bath_num_spins))
+            self.gCCE2_distance = DEFAULTS["gCCE2_distance"]
+            self.idx_gCCE2 = self.get_idx_gCCE2()
 
         # lists of lists of instances of Spin class (for each spin in each system and mean-field configuration)
         self.system_spins_list, self.mf_spins_list = self.get_spins_lists()

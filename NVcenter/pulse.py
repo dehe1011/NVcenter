@@ -2,6 +2,8 @@ import time
 
 import numpy as np
 import qutip as q
+from qiskit.circuit import QuantumCircuit
+from qiskit.quantum_info import Operator
 
 from . import DEFAULTS
 from .hamiltonian import Hamiltonian
@@ -9,6 +11,25 @@ from .helpers import calc_fidelity, spherical_to_cartesian, get_spin_matrices, a
 
 # -------------------------------------------------
 
+def get_cnot_gate(num_qubits, control, target):
+    """ Returns the CNOT gate for a given number of qubits, control and target qubit. """
+
+    qc = QuantumCircuit(num_qubits)
+    qc.cx(num_qubits-1-control, num_qubits-1-target)
+    dims = [[2]*num_qubits, [2]*num_qubits]
+    cnot_gate = Operator(qc).data
+    return q.Qobj(cnot_gate, dims=dims )
+
+def get_hada_gate(num_qubits, target):
+    """ Returns the Hadamard gate for a given number of qubits and target qubit. """
+
+    qc = QuantumCircuit(num_qubits)
+    qc.h(num_qubits-1-target)
+    dims = [[2]*num_qubits, [2]*num_qubits]
+    hada_gate = Operator(qc).data
+    return q.Qobj(hada_gate, dims=dims )
+
+# -------------------------------------------------
 
 class Pulse(Hamiltonian):
     """ A class to represent a pulse sequence for a Hamiltonian system.
@@ -69,10 +90,12 @@ class Pulse(Hamiltonian):
 
         # Keyword arguments
         self.dynamical_decoupling = kwargs.get("dynamical_decoupling", DEFAULTS["dynamical_decoupling"])
-        self.mode = kwargs.get("mode", "state_preparation")
+        self.mode = kwargs.get("mode", DEFAULTS["mode"])
         self.instant_pulses = kwargs.get("instant_pulses", DEFAULTS["instant_pulses"])
         self.rabi_frequency = kwargs.get("rabi_frequency", DEFAULTS["rabi_frequency"])
+        self.dm_offset = kwargs.get("dm_offset", DEFAULTS["dm_offset"])
         self.verbose = kwargs.get("verbose", DEFAULTS["verbose"])
+        self.num_hahn_echos = kwargs.get("num_hahn_echos", DEFAULTS["num_hahn_echos"])
 
         # Initialize pulse sequence
         self.init_pulse_seq()
@@ -141,12 +164,15 @@ class Pulse(Hamiltonian):
         self.cumulative_time_list = self.calc_cumulative_time_list()
         self.total_time = self.cumulative_time_list[-1]
 
+        self.left_time = 0 
+
     def calc_cumulative_time_list(self):
         """ Calculates the cumulative time (free time evolution and pulse time).  """
         
         if self.instant_pulses:
             num_time_steps = len(self.free_time_list)
-            return [sum(self.free_time_list[:i+1]) for i in range(num_time_steps)]
+            cumulative_time_list = [sum(self.free_time_list[:i+1]) for i in range(num_time_steps)]
+            return np.real(cumulative_time_list)
             
         num_time_steps = len(self.free_time_list) + len(self.pulse_time_list)
         full_time_list = [0] * num_time_steps
@@ -155,7 +181,7 @@ class Pulse(Hamiltonian):
             full_time_list[2*i+1] = self.pulse_time_list[i]
         full_time_list[-1] = self.free_time_list[-1]
         cumulative_time_list = [sum(full_time_list[:i+1]) for i in range(num_time_steps)]
-        return cumulative_time_list
+        return np.real(cumulative_time_list)
     
     def get_reduced_pulse_seq(self, t):
         """ Returns the pulse sequence for an arbitrary time. """
@@ -167,7 +193,8 @@ class Pulse(Hamiltonian):
             if self.verbose:
                 print("The time is larger than the total time.")
             free_time_list = self.free_time_list
-            free_time_list[-1] += t-self.total_time
+            self.left_time = t-self.total_time
+            # free_time_list[-1] += self.left_time
             if not self.instant_pulses:
                 return free_time_list, self.pulse_time_list, self.phi_list
             else: 
@@ -216,7 +243,19 @@ class Pulse(Hamiltonian):
                 print(f"Free time list: {free_time_list}, Alpha list: {alpha_list}, Phi list: {phi_list}")
             return free_time_list, alpha_list, phi_list
 
+    def get_t_list(self, stepsize=0.5e-6):
+        """ Helper function to get the time list for a pulse sequence. """
 
+        t_cum = self.cumulative_time_list
+        t_list = []
+        t_list.extend( np.arange(-1e-9, t_cum[-1], stepsize) )
+        pulse_time_before = [pulse_time for pulse_time in t_cum]
+        pulse_time_after = [pulse_time+1e-9 for pulse_time in t_cum]
+        t_list.extend(pulse_time_before)
+        t_list.extend(pulse_time_after)
+
+        return list( np.real(sorted(t_list)) )
+    
     # ------------------------------------------------
 
     def calc_H_rot(self, omega, phi, theta=np.pi/2):
@@ -299,7 +338,6 @@ class Pulse(Hamiltonian):
         #     np.savez(filename, eigv=eigv, eigs=eigs)
         return eigv, eigs
 
-
     def calc_pulse_matrix(self, pulse_seq, eigv, eigs):
         """ Calculates the pulse matrix for a given pulse sequence and eigensystem of an Hamiltonian. """
                 
@@ -316,6 +354,10 @@ class Pulse(Hamiltonian):
             # free time evolution
             if not self.dynamical_decoupling: 
                 U_time = self.calc_U_time(eigv_free, eigs_free, free_time_list[i])
+
+            elif i == 0:
+                U_time = self.calc_U_time(eigv_free, eigs_free, free_time_list[i])
+
             else:
                 U_half_time = self.calc_U_time(eigv_free, eigs_free, free_time_list[i]/2)
                 XGate = self.calc_U_rot(np.pi, 0, theta=np.pi/2)
@@ -328,11 +370,30 @@ class Pulse(Hamiltonian):
                 U_rot = self.calc_U_time(eigv_rot, eigs_rot, pulse_time_list[i])
             else:
                 U_rot = self.calc_U_rot(alpha_list[i], phi_list[i])
-            U_list.append(U_rot)
+            U_list.append(U_rot)  
 
         # free evolution after the last pulse
-        U_list.append(self.calc_U_time(eigv_free, eigs_free, free_time_list[-1]))
+        if not self.dynamical_decoupling: 
+            U_list.append( self.calc_U_time(eigv_free, eigs_free, free_time_list[-1]) )
 
+        else:
+            U_half_time = self.calc_U_time(eigv_free, eigs_free, free_time_list[-1]/2)
+            XGate = self.calc_U_rot(np.pi, 0, theta=np.pi/2)
+            U_list.append( U_half_time * XGate * U_half_time )
+
+        # free time evolution with Hahn echos after the last pulse
+        if self.left_time > 0:
+            if self.num_hahn_echos == 0:
+                U_list.append( self.calc_U_time(eigv_free, eigs_free, self.left_time) )
+            else: 
+                hahn_time = self.left_time / (self.num_hahn_echos+1)
+                U_hahn = self.calc_U_time(eigv_free, eigs_free, hahn_time)
+                XGate = self.calc_U_rot(np.pi, 0, theta=np.pi/2)
+                for _ in range(self.num_hahn_echos):
+                    U_hahn_time = self.calc_U_time(eigv_free, eigs_free, hahn_time)
+                    U_hahn *=  XGate * U_hahn_time 
+                    U_list.append( U_hahn)
+            
         # construct pulse_matrix from list of unitary gates
         pulse_matrix = self.system_identity # identity
         for U in U_list[::-1]: # see eq. (14) in Dominik's paper
@@ -363,17 +424,17 @@ class Pulse(Hamiltonian):
     def calc_new_states_full(self, t_list):
         """ Calculates the new states for the register for all times given in t_list. """
   
-        pulse_matrices = self.calc_pulse_matrices(t_list)
+        pulse_matrices_full = self.calc_pulse_matrices(t_list)
         old_states = self.calc_old_states()
         
         # loop over different systems
         new_states_full = []
         for i, old_state in enumerate(old_states):
-            pulse_matrices_time = pulse_matrices[i]
+            pulse_matrices = pulse_matrices_full[i]
             
             # loop over different timesteps for the same system
             new_states = []
-            for pulse_matrix in pulse_matrices_time:
+            for pulse_matrix in pulse_matrices:
 
                 assert self.mode in ['state_preparation', 'unitary_gate'], "Invalid mode."
 
@@ -388,7 +449,7 @@ class Pulse(Hamiltonian):
                 # offset to avoid numerical errors
                 shape = reduced_new_state.shape
                 dims = reduced_new_state.dims
-                reduced_new_state += q.Qobj(np.ones(shape), dims=dims) * 1e-6
+                reduced_new_state += q.Qobj(np.ones(shape), dims=dims) * self.dm_offset
 
                 new_states.append(reduced_new_state)
             new_states_full.append(new_states)

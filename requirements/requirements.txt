@@ -1,4 +1,5 @@
 qutip
+qiskit
 matplotlib
 
 notebook

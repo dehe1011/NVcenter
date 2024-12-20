@@ -18,6 +18,7 @@ dynamic = ["version"]
 dependencies = [
     "qutip",
     "matplotlib",
+    "qiskit",
 ]
 
 [project.urls]

@@ -16,7 +16,7 @@ class TwoSpinSystem:
         This works even for the full NV center with spin 1 (not only for the spin subspace of the NV center qubit).
     """
 
-    def __init__(self, config_spin1, config_spin2, time):
+    def __init__(self, config_spin1, config_spin2, time, suter_method=False):
         # Create instances of the Spin class
         self.spin1 = Spin(*config_spin1)
         self.spin2 = Spin(*config_spin2)
@@ -30,7 +30,7 @@ class TwoSpinSystem:
 
         # Calculate Hamiltonians
         self.dipolar_matrix = get_dipolar_matrix(
-            self.spin1.spin_pos, self.spin2.spin_pos, self.spin1.gamma, self.spin2.gamma
+            self.spin1.spin_pos, self.spin2.spin_pos, self.spin1.gamma, self.spin2.gamma, suter_method=suter_method
         )
         self.H_int = calc_H_int(self.S1, self.S2, self.dipolar_matrix)
         self.H = self._calc_H()
