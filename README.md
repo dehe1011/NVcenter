@@ -31,15 +31,21 @@ $$
 where 
 
 $$
-    \rho_{\mathrm{E} 0}^{(n)}\left(t\right)=\mathcal{S}_{n} \tilde{\rho}_{\mathrm{E} 0}^{(n)}(0) \mathcal{S}_{n}^{\dagger}\\
-    \rho_{\mathrm{E} 1}^{(n, l)}\left(t\right)=\operatorname{tr}_{B, l}\left(\mathcal{S}_{n, l} \tilde{\rho}_{\mathrm{E} 1}^{(n, l)}(0) \mathcal{S}_{n, l}^{\dagger}\right)\\
+    \rho_{\mathrm{E} 0}^{(n)}\left(t\right)=\mathcal{S}_{n} \tilde{\rho}_{\mathrm{E} 0}^{(n)}(0) \mathcal{S}_{n}^{\dagger}
+$$
+$$
+    \rho_{\mathrm{E} 1}^{(n, l)}\left(t\right)=\operatorname{tr}_{B, l}\left(\mathcal{S}_{n, l} \tilde{\rho}_{\mathrm{E} 1}^{(n, l)}(0) \mathcal{S}_{n, l}^{\dagger}\right)
+$$
+$$
     \rho_{\mathrm{E} 2}^{(n, l, q)}\left(t\right)=\operatorname{tr}_{B, l, q}\left(\mathcal{S}_{n, l, q} \tilde{\rho}_{\mathrm{E} 2}^{(n, l, q)}(0) \mathcal{S}_{n, l, q}^{\dagger}\right)
 $$
 
 and 
 
 $$
-    \langle a| \rho_{\mathrm{E} 1}^{(n)}(t)|b\rangle   = \langle a| \rho_{\mathrm{E} 0}^{(n)}(t)|b\rangle \prod_l \frac{\langle a| \rho_{\mathrm{E} 1}^{(n, l)}(t)|b\rangle}{\langle a| \rho_{\mathrm{E} 0}^{(n)}(t)|b\rangle}\\
+    \langle a| \rho_{\mathrm{E} 1}^{(n)}(t)|b\rangle   = \langle a| \rho_{\mathrm{E} 0}^{(n)}(t)|b\rangle \prod_l \frac{\langle a| \rho_{\mathrm{E} 1}^{(n, l)}(t)|b\rangle}{\langle a| \rho_{\mathrm{E} 0}^{(n)}(t)|b\rangle}
+$$
+$$
     \langle a| \rho_{\mathrm{E} 2}^{(n)}(t)|b\rangle = \langle a| \rho_{\mathrm{E} 1}^{(n)}(t)|b\rangle \prod_{l, q} \frac{\langle a| \rho_{\mathrm{E} 2, q)}^{(n, l)}(t)|b\rangle}{\langle a| \rho_{\mathrm{E} 0}^{(n)}(t)|b\rangle^{-1}\langle a| \rho_{\mathrm{E} 1}^{(n)}(t)|b\rangle\langle a| \rho_{\mathrm{E} 1}^{(n, q)}(t)|b\rangle}
 $$
 
@@ -48,7 +54,6 @@ To avoid numerical errors, the cluster expansion can directly be applied to the 
 $$
 \mathcal{F}_{f, \mathrm{E} 1}^{(n)}=\mathcal{F}_{f, \mathrm{E} 0}^{(n)} \prod_l \frac{\mathcal{F}_{f, \mathrm{E} 1}^{(n, l)}}{\mathcal{F}_{f, \mathrm{E} 0}^{(n)}} 
 $$
-
 $$
 \mathcal{F}_{f, \mathrm{E} 2}^{(n)}= \mathcal{F}_{f, \mathrm{E} 1}^{(n)} \prod_{l, q} \frac{\mathcal{F}_{f, \mathrm{E} 2}^{(n, l, q)}}{\left(\mathcal{F}_{f, \mathrm{E} 0}^{(n)}\right)^{-1} \mathcal{F}_{f, \mathrm{E} 1}^{(n, l)} \mathcal{F}_{f, \mathrm{E} 1}^{(n, q)}}.
 $$
