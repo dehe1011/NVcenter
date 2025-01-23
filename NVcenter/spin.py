@@ -58,8 +58,11 @@ class Spin:
                 + renormalization * self.S[3]
             )
 
+        # --------------------------------------------
+        
+        if self.spin_type == "NV0":
             # The NV center transition is only driven by the microwave field from outside causing the Rabi oscillations
-            # self.H = q.Qobj([[0,0],[0,0]])
+            self.H = q.Qobj([[0,0],[0,0]])
 
         # --------------------------------------------
 

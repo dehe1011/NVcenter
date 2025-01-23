@@ -6,9 +6,7 @@ thermal_bath: True
 suter_method: False
 approx_level: 'no_bath'
 pulse_seq: [0]
-old_state: None
 dynamical_decoupling: False
-mode: 'state_preparation'
 instant_pulses: False
 env_approx_level: 'no_bath'
 dm_offset: 1.e-8

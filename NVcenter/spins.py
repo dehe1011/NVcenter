@@ -35,13 +35,13 @@ class Spins:
         # register porperties
         self.register_config = register_config
         self.register_num_spins = len(self.register_config)
-        self.register_spin_types, self.register_spin_pos, self.register_init_spin, _ = list(zip(*register_config))
+        self.register_spin_types, self.register_spin_pos, self.register_init_spin, _ = list(zip(*self.register_config))
 
         # bath properties
         self.bath_config = bath_config
         self.bath_num_spins = len(self.bath_config)
         if self.bath_num_spins > 0:
-            self.bath_spin_types, self.bath_spin_pos, self.bath_init_spin, _ = list(zip(*bath_config))
+            self.bath_spin_types, self.bath_spin_pos, self.bath_init_spin, _ = list(zip(*self.bath_config))
 
         # list of instances of Spin class (for each spin in the register and bath)
         self.register_spins = [Spin(*spin_config) for spin_config in self.register_config]
@@ -57,6 +57,7 @@ class Spins:
 
         # lists of lists of instances of Spin class (for each spin in each system and mean-field configuration)
         self.system_spins_list, self.mf_spins_list = self.get_spins_lists()
+        self.num_systems = len(self.system_spins_list)
         self.system_num_spins = len(self.system_spins_list[0])
         self.mf_num_spins = len(self.mf_spins_list[0])
 
@@ -72,7 +73,7 @@ class Spins:
             return idx_gCCE2
         else:
             idx_gCCE2 = []
-            for i, j in combinations(self.bath_num_spins, 2):
+            for i, j in combinations(range(self.bath_num_spins), 2):
                 distance_NV = np.linalg.norm(
                     np.array(self.bath_spin_pos[i])
                     - np.array(self.register_spin_pos[0])

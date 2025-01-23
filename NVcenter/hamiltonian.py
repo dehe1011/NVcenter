@@ -1,3 +1,5 @@
+import time 
+from tqdm import tqdm
 import qutip as q
 
 from . import DEFAULTS
@@ -41,14 +43,17 @@ class Hamiltonian(Spins):
     def __init__(self, register_config, bath_config, approx_level, **kwargs):
         """Calculates the Spin Hamiltonians and initial states for all given pairs of system and mean-field spins."""
 
+        t0 = time.time()
         super().__init__(register_config, bath_config, approx_level)
 
         # keyword arguments
         self.thermal_bath = kwargs.get("thermal_bath", DEFAULTS["thermal_bath"])
         self.suter_method = kwargs.get("suter_method", DEFAULTS["suter_method"])
+        self.verbose = kwargs.get("verbose", DEFAULTS["verbose"])
 
-        # spin operators in the system Hilbert space
-        self.system_spin_ops = self.calc_system_spin_ops()
+        # spin operators in the larger Hilbert space
+        self.register_spin_ops = self.calc_spin_ops(self.register_spins)
+        self.system_spin_ops = self.calc_spin_ops(self.system_spins_list[0])
 
         # identity operators for register and system
         self.register_identity = q.tensor([q.qeye(2) for _ in range(self.register_num_spins)])
@@ -56,22 +61,27 @@ class Hamiltonian(Spins):
 
         # initial states for register and systems
         self.register_init_state = self.calc_register_init_state()
-        self.system_init_states = self.calc_system_states(self.register_init_state)
+        self.system_init_states = self.calc_system_init_states(self.register_init_state)
 
         # Hamiltonian matrices for the systems
+        t1 = time.time()
         self.matrices = self.calc_matrices()
+        t2 = time.time()
+        
+        if self.verbose:
+            print(f"Time to calculate the Hamiltonian matrices: {t2-t1}")
+            print(f"Time to initialize the Hamiltonian class: {t2-t0}")
 
     # -------------------------------------------------
 
-    def calc_system_spin_ops(self):
+    def calc_spin_ops(self, spins):
         """Returns the spin operators I, Sx, Sy and Sz in the Hilbert sapce of the system."""
 
-        system_spins = self.system_spins_list[0]
-        system_spin_ops = []
-        for i, spin in enumerate(system_spins):
-            system_spin_op = [adjust_space_dim(self.system_num_spins, op, i) for op in spin.S]
-            system_spin_ops.append(system_spin_op)
-        return system_spin_ops
+        spin_ops = []
+        for i, spin in enumerate(spins):
+            spin_op = [adjust_space_dim( len(spins), op, i) for op in spin.S]
+            spin_ops.append(spin_op)
+        return spin_ops
 
     def calc_register_init_state(self):
         """Calculated the initial state of the register."""
@@ -85,7 +95,7 @@ class Hamiltonian(Spins):
         else:
             return q.tensor([bath_spin.init_state for bath_spin in self.bath_spins])
 
-    def calc_system_states(self, register_state):
+    def calc_system_init_states(self, register_state):
         """Returns the system states for a given register state."""
 
         if self.approx_level == "no_bath":
@@ -112,9 +122,12 @@ class Hamiltonian(Spins):
         for each pair of system and mean-field."""
 
         matrices = []
-        for system_spins, mf_spins in zip(self.system_spins_list, self.mf_spins_list):
-            H_system = self.calc_H_system(system_spins)
-            H_mf = self.calc_H_mf(system_spins, mf_spins)
+        disable_tqdm = not self.verbose
+        message = f"Calculating Hamiltonians for {self.approx_level}"
+
+        for i in tqdm(range(self.num_systems), desc=message, disable=disable_tqdm):
+            H_system = self.calc_H_system(self.system_spins_list[i])
+            H_mf = self.calc_H_mf(self.system_spins_list[i], self.mf_spins_list[i])
             matrices.append(H_system + H_mf)
         return matrices
 
@@ -134,14 +147,15 @@ class Hamiltonian(Spins):
                     )
 
                     # the NV spin is not flipped by the surrounding spins 
-                    # if spin1.spin_type == "NV":
-                    #     dipolar_matrix[0, :] = [0, 0, 0]
-                    #     dipolar_matrix[1, :] = [0, 0, 0]
+                    if spin1.spin_type == "NV0":
+                        dipolar_matrix[0, :] = [0, 0, 0]
+                        dipolar_matrix[1, :] = [0, 0, 0]
                     H += calc_H_int(spin_op1, spin_op2, dipolar_matrix)
         return H
 
     def calc_H_mf(self, system_spins, mf_spins):
-        """Returns the Hamiltonian for the mean-field spins (in the system Hilbert space)."""
+        """Returns the Hamiltonian for the mean-field spins (in the system Hilbert space).
+        Note: This only works for a spin-1/2 bath. """
 
         H = 0
         for i, system_spin in enumerate(system_spins):

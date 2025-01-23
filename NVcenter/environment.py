@@ -1,5 +1,6 @@
 import qutip as q
 import numpy as np
+from tqdm import tqdm
 
 from . import DEFAULTS
 from .pulse import Pulse
@@ -31,22 +32,23 @@ def get_state(observation, dims):
 class Environment(Pulse):
     def __init__(self, register_config, bath_configs, **kwargs):
 
-        super().__init__(register_config, bath_configs[0], **kwargs)
+        super().__init__(register_config, [], **kwargs)
 
         self.bath_configs = bath_configs
         self.num_bath_configs = len(bath_configs)
         self.env_approx_level = kwargs.get('env_approx_level', DEFAULTS['env_approx_level'])
+        self.approx_level = self.env_approx_level
         self.kwargs = kwargs
         
-        self.max_steps = 3
+        self.max_steps = 1000
         self.infidelity_threshold = 0.001
         self.dims = self.register_init_state.dims
 
         self.count = 0
-        self.fidelity = calc_fidelity(self.old_state, self.target)
+        self.fidelity = calc_fidelity(self.old_register_state, self.target)
         self.info = {'Fidelity': self.fidelity}
         self.reward = 0
-        self.observation = get_observation(self.old_state)
+        self.observation = get_observation(self.old_register_state)
         self.done = False
 
         # from gymnasium import spaces
@@ -109,14 +111,20 @@ class Environment(Pulse):
         self.done = False
     
     # ----------------------------------------------
+
+    def get_observables(self, pulse_seq, t_list=None):
+        pass
+
     
-    def get_fidelities(self, pulse_seq, t_list=None):
+    def get_fidelities(self, pulse_seq, t_list='final'):
         """ Implements the gCCE method to calculate the fidelities of the pulse sequence. """
 
-        # set the pulse sequence and the old state
+        # set the pulse sequence and the t_list
         self.pulse_seq = pulse_seq
-        if t_list is None:
+        if t_list == 'final':
                 t_list = [self.total_time]
+        if t_list == 'automatic':
+                t_list = self.t_list
         
         # no bath or full bath
         if self.env_approx_level in ['no_bath', 'full_bath']:            
@@ -176,30 +184,35 @@ class Environment(Pulse):
         return 1/self.num_bath_configs * fidelities_gCCE_baths
 
 
-    def get_new_states(self, pulse_seq, t_list=None):
+    def get_new_states(self, pulse_seq, t_list='final'):
         """ Implements the gCCE method to calculate the new states of the pulse sequence. """
 
-        # set the pulse sequence and the old state
+        # set the pulse sequence and the t_list
         self.pulse_seq = pulse_seq
-        if t_list is None:
+        if t_list == 'final':
                 t_list = [self.total_time]
+        if t_list == 'automatic':
+                t_list = self.t_list
         
         # no bath or full bath
         if self.env_approx_level in ['no_bath', 'full_bath']:
             self.approx_level = self.env_approx_level
-            new_states_full = self.calc_new_states_full(t_list)
+            new_states_full = self.calc_new_states_full(t_list=t_list)
             return new_states_full[0]
         
         # iterate over all bath configurations for gCCE
         states_gCCE_baths = 0 
         dims = self.register_init_state.dims
 
-        for bath_config in self.bath_configs:
+        message = f'Calculating another bath configuration'
+        disable_tqdm = not self.verbose
+
+        for bath_config in tqdm(self.bath_configs, desc=message, disable=disable_tqdm):
             self.bath_config = bath_config
             
-             #gCCE0 initialization
+            # gCCE0 initialization
             self.approx_level = 'gCCE0'
-            states_full_gCCE0 = self.calc_new_states_full(t_list)
+            states_full_gCCE0 = self.calc_new_states_full(t_list=t_list)
             states_full_gCCE0 = numpyfy(states_full_gCCE0)
             states_gCCE0 = states_full_gCCE0[0]
 
@@ -212,7 +225,7 @@ class Environment(Pulse):
 
             # gCCE1 initialization
             self.approx_level = 'gCCE1'
-            states_full_gCCE1 = self.calc_new_states_full(t_list)
+            states_full_gCCE1 = self.calc_new_states_full(t_list=t_list)
             states_full_gCCE1 = numpyfy(states_full_gCCE1)
 
             # gCCE1 formula
@@ -226,7 +239,7 @@ class Environment(Pulse):
 
             # gCCE2 initialization
             self.approx_level = 'gCCE2'
-            states_full_gCCE2 = self.calc_new_states_full(t_list)
+            states_full_gCCE2 = self.calc_new_states_full(t_list=t_list)
             states_full_gCCE2 = numpyfy(states_full_gCCE2)
 
             # gCCE2 formula

@@ -3,7 +3,6 @@ import qutip as q
 
 from . import CONST
 from .helpers import adjust_space_dim, get_dipolar_matrix
-from .spin_bath import SpinBath
 from .spins import Spins
 
 
@@ -43,11 +42,8 @@ def calc_hadamard_pulse_seq(C13_pos, suter_method=False):
     """
 
     register_config = [("NV", (0, 0, 0), 0, {}), ("C13", C13_pos, 0, {})]
-    bath_config = SpinBath(
-        "C13", 0.02e-2, 2e-9, 4.2e-9
-    ).config  # arbitrary since we don't use bath properties
     approx_level = "no_bath"
-    spins = Spins(register_config, bath_config, approx_level)
+    spins = Spins(register_config, [], approx_level)
 
     spin1, spin2 = spins.register_spins
     dipolar_matrix = get_dipolar_matrix(
