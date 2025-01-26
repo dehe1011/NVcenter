@@ -1,4 +1,5 @@
 import time
+from pathos.multiprocessing import ProcessingPool # pylint: disable=import-error
 from tqdm import tqdm
 
 import numpy as np
@@ -8,7 +9,7 @@ from qiskit.quantum_info import Operator
 
 from . import DEFAULTS
 from .hamiltonian import Hamiltonian
-from .helpers import calc_fidelity, spherical_to_cartesian, get_spin_matrices, adjust_space_dim
+from .helpers import calc_fidelity, calc_logarithmic_negativity, spherical_to_cartesian, get_spin_matrices, adjust_space_dim
 
 # -------------------------------------------------
 
@@ -83,8 +84,9 @@ class Pulse(Hamiltonian):
         self._approx_level = kwargs.get("approx_level", DEFAULTS["approx_level"])
         self._bath_config = bath_config
         self._pulse_seq = kwargs.get("pulse_seq", DEFAULTS["pulse_seq"])
+        self.kwargs = kwargs
 
-        super().__init__(register_config, self.bath_config, self.approx_level, **kwargs)
+        super().__init__(register_config, self.bath_config, self.approx_level, **self.kwargs)
 
         self._old_register_state = kwargs.get("old_register_state", self.register_init_state) # old register state
         self._target = kwargs.get("target", self.register_identity)
@@ -129,7 +131,7 @@ class Pulse(Hamiltonian):
         assert new_approx_level in ['no_bath', 'full_bath', 'gCCE0', 'gCCE1', 'gCCE2', 'gCCE3'], "Invalid approximation level."
         if new_approx_level != self._approx_level:
             self._approx_level = new_approx_level
-            super().__init__(self.register_config, self._bath_config, self._approx_level) # reinitialize the Hamiltonian
+            super().__init__(self.register_config, self._bath_config, self._approx_level, **self.kwargs) # reinitialize the Hamiltonian
 
     @property
     def target(self):  # pylint: disable=missing-function-docstring
@@ -147,7 +149,7 @@ class Pulse(Hamiltonian):
     def bath_config(self, new_bath_config):
         if new_bath_config != self._bath_config:
             self._bath_config = new_bath_config
-            super().__init__(self.register_config, self._bath_config, self._approx_level) # reinitialize the Hamiltonian
+            super().__init__(self.register_config, self._bath_config, self._approx_level, **self.kwargs) # reinitialize the Hamiltonian
 
     # ------------------------------------------------
 
@@ -179,7 +181,7 @@ class Pulse(Hamiltonian):
         t_list.extend(pulse_time_after)
         t_list.append(t_cum[-1])
 
-        return list( np.real(sorted(t_list)) )
+        return np.array(list( np.real(sorted(t_list)) ))
 
 
     def calc_cumulative_time_list(self):
@@ -250,9 +252,6 @@ class Pulse(Hamiltonian):
             rabi_frequency = 2*np.pi*self.rabi_frequency # Rabi frequency as angular frequency
             for phi in self.phi_list:
                 rot_matrix = self.calc_H_rot(rabi_frequency, phi)
-
-                # remove the NV center energy barrier. this step is very important  
-                # free_matrix -= q.Qobj(np.diag(free_matrix.diag()), dims=free_matrix.dims) 
 
                 eigv_rot, eigs_rot = np.linalg.eigh( (free_matrix + rot_matrix).full() )
                 eigv.append(eigv_rot)
@@ -332,45 +331,64 @@ class Pulse(Hamiltonian):
 
         # 1. free time evolution before the first pulse
         eigv_free, eigs_free = eigv[0], eigs[0]
-        frist_free_evo = self.calc_U_time(eigv_free, eigs_free, free_time_list[0])
+        first_free_evo = self.calc_U_time(eigv_free, eigs_free, free_time_list[0])
         if num_pulses == 0:
-            return frist_free_evo
+            return first_free_evo
         
-        U_list = [frist_free_evo]
+        U_list = [first_free_evo]
 
         # 2. loop over pulses
         for i in range(0, num_pulses):
 
-            # rotation 
-            if not self.instant_pulses:
-                eigv_rot, eigs_rot = eigv[i], eigs[i]
-                U_rot = self.calc_U_time(eigv_rot, eigs_rot, pulse_time_list[i])
-            else:
+            if self.instant_pulses:
+                # rotation 
                 U_rot = self.calc_U_rot(alpha_list[i], phi_list[i])
-            U_list.append(U_rot)  
 
-            # free time evolution
-            if not self.dynamical_decoupling: 
-                U_time = self.calc_U_time(eigv_free, eigs_free, free_time_list[i+1])
+                # free time evolution
+                if self.dynamical_decoupling: 
+                    U_half_time = self.calc_U_time(eigv_free, eigs_free, free_time_list[i+1]/2)
+                    XGate = self.calc_U_rot(np.pi, 0, theta=np.pi/2)
+                    U_time = U_half_time * XGate * U_half_time
+                else:
+                    U_time = self.calc_U_time(eigv_free, eigs_free, free_time_list[i+1])
 
             else:
-                U_half_time = self.calc_U_time(eigv_free, eigs_free, free_time_list[i+1]/2)
-                XGate = self.calc_U_rot(np.pi, 0, theta=np.pi/2)
-                U_time = U_half_time * XGate * U_half_time
-            U_list.append(U_time)
+                # rotation 
+                eigv_rot, eigs_rot = eigv[i+1], eigs[i+1]
+                U_rot = self.calc_U_time(eigv_rot, eigs_rot, pulse_time_list[i])
 
+                # free time evolution
+                if self.dynamical_decoupling: 
+                    difference = free_time_list[i+1] - self.free_time_list[i+1]/2
+                    if difference >= 0:
+                        U_half_time = self.calc_U_time(eigv_free, eigs_free, self.free_time_list[i+1]/2)
+                        U_difference = self.calc_U_time(eigv_free, eigs_free, difference)
+                        # TODO: since the DD takes a finite time for continous drive one must be careful
+                        # XGate = self.calc_U_time(eigv_rot, eigs_rot, 1/(2*self.rabi_frequency))
+                        XGate = self.calc_U_rot(np.pi, 0, theta=np.pi/2)
+                        U_time = U_half_time * XGate * U_difference
+                    else:
+                        U_time = self.calc_U_time(eigv_free, eigs_free, free_time_list[i+1])
+                else:
+                    U_time = self.calc_U_time(eigv_free, eigs_free, free_time_list[i+1])
+
+            U_list.append(U_rot)  
+            U_list.append(U_time)
+        
         # 3. free time evolution with Hahn echos after the last pulse
         if self.left_time > 0:
             if self.num_hahn_echos == 0:
                 U_list.append( self.calc_U_time(eigv_free, eigs_free, self.left_time) )
             else: 
                 hahn_time = self.left_time / (self.num_hahn_echos+1)
-                U_hahn = self.calc_U_time(eigv_free, eigs_free, hahn_time)
+                U_hahn_time = self.calc_U_time(eigv_free, eigs_free, hahn_time)
+                U_hahn = U_hahn_time
+                # TODO: since the DD takes a finite time for continous drive one must be careful
+                # XGate = self.calc_U_time(eigv_rot, eigs_rot, 1/(2*self.rabi_frequency))
                 XGate = self.calc_U_rot(np.pi, 0, theta=np.pi/2)
                 for _ in range(self.num_hahn_echos):
-                    U_hahn_time = self.calc_U_time(eigv_free, eigs_free, hahn_time)
                     U_hahn *=  XGate * U_hahn_time 
-                    U_list.append( U_hahn )
+                U_list.append( U_hahn )
 
         # t1 = time.time()
 
@@ -384,32 +402,58 @@ class Pulse(Hamiltonian):
         #     print(f"Time to calculate the unitary gates: {t2-t0} s.")
         #     print(f"Time to construct the pulse matrix: {t2-t1} s.")
         return pulse_matrix
+    
+    def calc_pulse_matrices(self, i, matrices, t_list):
+        eigv, eigs = self.calc_eigensystem(matrices[i])
+
+        # loop over different timesteps for the same system
+        pulse_matrices = []
+        for t in t_list:
+            pulse_seq = self.get_reduced_pulse_seq(t)
+            pulse_matrix = self.calc_pulse_matrix(pulse_seq, eigv, eigs)
+
+            pulse_matrices.append( pulse_matrix )
+
+        return pulse_matrices
 
 
-    def calc_pulse_matrices(self, t_list=None):
+    def calc_pulse_matrices_full(self, t_list):
         """ Calculates the pulse matrices for each system at a given time t. """
 
         t0 = time.time()
-
-        if t_list is None:
-            t_list = self.t_list
       
-        # loop over different systems
-        pulse_matrices_full = []
+        # progress bar properties
         disable_tqdm = not self.verbose
         message = f"Calculating pulse matrices for {self.approx_level}"
 
-        for i in tqdm(range(self.num_systems), desc=message, disable=disable_tqdm):
-            eigv, eigs = self.calc_eigensystem(self.matrices[i])
+        # set
+        if isinstance(t_list, str):
+            if t_list == 'final':
+                t_list = [self.total_time]
+            if t_list == 'automatic':
+                t_list = self.t_list
+        self.matrices = self.calc_matrices()
 
-            # loop over different timesteps for the same system
-            pulse_matrices = []
-            for t in t_list:
-                pulse_seq = self.get_reduced_pulse_seq(t)
-                pulse_matrix = self.calc_pulse_matrix(pulse_seq, eigv, eigs)
+        # No Parallelization
+        if not self.parallelization:
+            pulse_matrices_full = []
+            for i in tqdm(range(self.num_systems), desc=message, disable=disable_tqdm):
+                pulse_matrices_full.append( self.calc_pulse_matrices(i, self.matrices, t_list) )
 
-                pulse_matrices.append( pulse_matrix )
-            pulse_matrices_full.append(pulse_matrices)
+        # Parallelization
+        else:
+            with ProcessingPool(processes=self.num_cpu) as pool:
+                pulse_matrices_full = list(
+                    tqdm(
+                        pool.map(
+                            lambda i: self.calc_pulse_matrices(i, self.matrices, t_list),
+                            range(self.num_systems),
+                        ),
+                        total=self.num_systems,
+                        desc=message,
+                        disable=disable_tqdm,
+                    )
+                )
 
         t1 = time.time()
         if self.verbose:
@@ -418,39 +462,61 @@ class Pulse(Hamiltonian):
 
     # ---------------------------------------------------
 
-    def calc_new_states_full(self, t_list=None):
+    def calc_new_register_states(self, i, pulse_matrices_full, old_system_states):
+
+        pulse_matrices = pulse_matrices_full[i]
+        
+        # loop over timesteps
+        new_register_states = []
+        for pulse_matrix in pulse_matrices:
+
+            new_system_state = pulse_matrix * old_system_states[i] * pulse_matrix.dag()
+
+            # reduce from system to register space by tracing out
+            new_register_state = q.ptrace(new_system_state, np.arange(self.register_num_spins))
+
+            # offset to avoid numerical errors
+            shape = new_register_state.shape
+            dims = new_register_state.dims
+            new_register_state += q.Qobj(np.ones(shape), dims=dims) * self.dm_offset
+
+            new_register_states.append(new_register_state)
+
+        return new_register_states
+
+    def calc_new_register_states_full(self, t_list):
         """ Combines Pulse Matrices and Initial States. Calculates the new states of the register for all systems and timesteps. """
 
         t0 = time.time()
-  
-        pulse_matrices_full = self.calc_pulse_matrices(t_list=t_list)
-        old_system_states = self.calc_system_init_states(self.old_register_state)
-        
-        # loop over systems
-        new_register_states_full = []
+
+        # progress bar properties
         disable_tqdm = not self.verbose
         message = f"Calculating new states for {self.approx_level}"
 
-        for i in tqdm(range(self.num_systems), desc=message, disable=disable_tqdm):
-            pulse_matrices = pulse_matrices_full[i]
-            
-            # loop over timesteps
-            new_register_states = []
-            for pulse_matrix in pulse_matrices:
+        # set
+        pulse_matrices_full = self.calc_pulse_matrices_full(t_list)
+        old_system_states = self.calc_system_init_states(self.old_register_state)
 
-                new_system_state = pulse_matrix * old_system_states[i] * pulse_matrix.dag()
+        # No Parallelization
+        if not self.parallelization:
+            new_register_states_full = []
+            for i in tqdm(range(self.num_systems), desc=message, disable=disable_tqdm):
+                new_register_states_full.append( self.calc_new_register_states(i, pulse_matrices_full, old_system_states) )
 
-                # reduce from system to register space by tracing out
-                new_register_state = q.ptrace(new_system_state, np.arange(self.register_num_spins))
-
-                # offset to avoid numerical errors
-                shape = new_register_state.shape
-                dims = new_register_state.dims
-                new_register_state += q.Qobj(np.ones(shape), dims=dims) * self.dm_offset
-
-                new_register_states.append(new_register_state)
-
-            new_register_states_full.append(new_register_states)
+        # Parallelization
+        else:
+            with ProcessingPool(processes=self.num_cpu) as pool:
+                new_register_states_full = list(
+                    tqdm(
+                        pool.map(
+                            lambda i: self.calc_new_register_states(i, pulse_matrices_full, old_system_states),
+                            range(self.num_systems),
+                        ),
+                        total=self.num_systems,
+                        desc=message,
+                        disable=disable_tqdm,
+                    )
+                )
 
         t1 = time.time()
         if self.verbose:
@@ -458,35 +524,26 @@ class Pulse(Hamiltonian):
         return new_register_states_full
 
 
-    def calc_fidelities_full(self, new_register_states_full):
+    def calc_values_full(self, observable, t_list):
         """ Calculates the fidelities for the new states. """
 
+        new_register_states_full = self.calc_new_register_states_full(t_list)
+
         # loop over systems
-        fidelities_full = []
+        values_full = []
         for new_register_states in new_register_states_full:
 
             # loop over timesteps
-            fidelities = []
+            values = []
             for new_register_state in new_register_states:
-                fidelity = calc_fidelity(new_register_state, self.target)
-                fidelities.append(fidelity)
+                
+                if observable == "fidelity":
+                    value = calc_fidelity(new_register_state, self.target)
+                elif observable == "log_neg":
+                    value = calc_logarithmic_negativity(new_register_state)
+                else: 
+                    value = q.expect(new_register_state, observable)
 
-            fidelities_full.append(fidelities)
-        return fidelities_full
-    
-
-    def calc_observables_full(self, observable, new_register_states_full):
-        """ Calculates the fidelities for the new states. """
-
-        # loop over systems
-        exp_values_full = []
-        for new_register_states in new_register_states_full:
-
-            # loop over timesteps
-            exp_values = []
-            for new_register_state in new_register_states:
-                exp_value = q.expect(new_register_state, observable)
-                exp_values.append(exp_value)
-
-            exp_values_full.append(exp_values)
-        return exp_values_full
+                values.append(value)
+            values_full.append(values)
+        return values_full

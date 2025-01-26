@@ -104,6 +104,11 @@ def save_spin_baths(
         "num_init_state": num_init_states,
     }
 
+    save_spin_baths(spin_configs, metadata, directory, filename)
+
+    return spin_configs
+
+def save_spin_baths(spin_configs, metadata, directory, filename):
     spin_configs = {"Configurations": spin_configs, "Metadata": metadata}
 
     # Save the nested dictionary as a JSON file
@@ -111,8 +116,6 @@ def save_spin_baths(
     filepath = os.path.join(directory, filename + ".json")
     with open(filepath, "w", encoding="utf-8") as file:
         json.dump(spin_configs, file, indent=4)
-
-    return spin_configs
 
 
 def load_spin_baths(filename, directory, load_metadata=False):

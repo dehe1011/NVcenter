@@ -1,4 +1,6 @@
 import time 
+from multiprocessing import cpu_count
+from pathos.multiprocessing import ProcessingPool # pylint: disable=import-error
 from tqdm import tqdm
 import qutip as q
 
@@ -43,12 +45,12 @@ class Hamiltonian(Spins):
     def __init__(self, register_config, bath_config, approx_level, **kwargs):
         """Calculates the Spin Hamiltonians and initial states for all given pairs of system and mean-field spins."""
 
-        t0 = time.time()
         super().__init__(register_config, bath_config, approx_level)
 
         # keyword arguments
         self.thermal_bath = kwargs.get("thermal_bath", DEFAULTS["thermal_bath"])
         self.suter_method = kwargs.get("suter_method", DEFAULTS["suter_method"])
+        self.parallelization = kwargs.get("parallelization", DEFAULTS["parallelization"])
         self.verbose = kwargs.get("verbose", DEFAULTS["verbose"])
 
         # spin operators in the larger Hilbert space
@@ -63,14 +65,11 @@ class Hamiltonian(Spins):
         self.register_init_state = self.calc_register_init_state()
         self.system_init_states = self.calc_system_init_states(self.register_init_state)
 
+        # number of CPU cores for parallelization
+        self.num_cpu = max(20, cpu_count()) 
+
         # Hamiltonian matrices for the systems
-        t1 = time.time()
-        self.matrices = self.calc_matrices()
-        t2 = time.time()
-        
-        if self.verbose:
-            print(f"Time to calculate the Hamiltonian matrices: {t2-t1}")
-            print(f"Time to initialize the Hamiltonian class: {t2-t0}")
+        # self.matrices = self.calc_matrices()
 
     # -------------------------------------------------
 
@@ -117,18 +116,45 @@ class Hamiltonian(Spins):
     
     # -------------------------------------------------
 
+    def calc_matrix(self, i):
+        H_system = self.calc_H_system(self.system_spins_list[i])
+        H_mf = self.calc_H_mf(self.system_spins_list[i], self.mf_spins_list[i])
+        return H_system + H_mf
+
     def calc_matrices(self):
         """Returns the full Hamiltonian matrices for the system and mean-field spins
         for each pair of system and mean-field."""
 
-        matrices = []
+        t0 = time.time()
+
+        # progress bar properties
         disable_tqdm = not self.verbose
         message = f"Calculating Hamiltonians for {self.approx_level}"
 
-        for i in tqdm(range(self.num_systems), desc=message, disable=disable_tqdm):
-            H_system = self.calc_H_system(self.system_spins_list[i])
-            H_mf = self.calc_H_mf(self.system_spins_list[i], self.mf_spins_list[i])
-            matrices.append(H_system + H_mf)
+        # No Parallelization
+        if not self.parallelization:
+            matrices = []
+            for i in tqdm(range(self.num_systems), desc=message, disable=disable_tqdm):
+                matrices.append(self.calc_matrix(i))
+
+        # Parallelization
+        else:
+            with ProcessingPool(processes=self.num_cpu) as pool:
+                matrices = list(
+                    tqdm(
+                        pool.map(
+                            self.calc_matrix,
+                            range(self.num_systems),
+                        ),
+                        total=self.num_systems,
+                        desc=message,
+                        disable=disable_tqdm,
+                    )
+                )
+        
+        t1 = time.time()
+        if self.verbose:
+            print(f"Time to calculate the Hamiltonians: {t1-t0} s.")
         return matrices
 
     def calc_H_system(self, system_spins):

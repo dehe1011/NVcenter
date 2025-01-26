@@ -9,15 +9,15 @@ pulse_seq: [0]
 dynamical_decoupling: False
 instant_pulses: False
 env_approx_level: 'no_bath'
-dm_offset: 1.e-8
+dm_offset: 1.e-5
 num_hahn_echos: 0
+parallelization: False
 
 # NV center Rabi frequency
 rabi_frequency: 0.5e+6  # Hz, used by Suter
 
 # P1 center gCCE2 radius
 gCCE2_distance: 55.e-9 # m, used by Dominik
-
 
 constants:
   # Carcon lattice constant 
