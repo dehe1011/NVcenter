@@ -25,3 +25,4 @@ __pycache__
 .ipynb_checkpoints
 
 NVcenter/data/logs/
+*.egg-info

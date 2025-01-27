@@ -6,10 +6,7 @@ with open("requirements/requirements.txt") as f:
 with open("requirements/dev-requirements.txt") as f:
     dev = f.read().splitlines()
 
-with open("requirements/doc-requirements.txt") as f:
-    docs = f.read().splitlines()
-
-extras = dev + docs
+extras = dev
 
 
 def read_version():
@@ -36,5 +33,5 @@ setup(
         "Operating System :: OS Independent",
     ],
     install_requires=required,
-    extras_require={"dev": dev, "docs": docs, "all": extras},
+    extras_require={"dev": dev, "all": extras},
 )
