@@ -1,28 +1,33 @@
 # check which files are ignored: git status --ignored
 
 .venv/
-.delete/
 .vscode/
 .pre-commit-config.yaml
 howto/
 TODO.txt
 
+ppo_cartpole_tensorboard/
+
 # created by pytest
 __pycache__
 .pytest_cache/
 
+# pylint
+.pylintrc
+
+# mypy
+.mypy_cache/
+
 # created by setuptools (python setup.py sdist bdist_wheel)
 dist/
 build/
-.egg-info/
+*.egg-info/
 
 # created by build (python -m build)
 dist/
-.egg-info/
+*.egg-info/
 
 # created by Jupyter Notebooks
 __pycache__
 .ipynb_checkpoints
 
-NVcenter/data/logs/
-*.egg-info
