@@ -48,6 +48,7 @@ def get_spin_matrices(spin, trunc=False):
     # natural units: energies become angular frequencies
     hbar = 1
 
+    spin_matrices = None
     # spin-1 matrices, e.g. for the full NV-center and nitrogen nuclear spin
     if spin == 1:
         Sx = hbar * q.spin_Jx(1)
@@ -56,16 +57,24 @@ def get_spin_matrices(spin, trunc=False):
 
         # truncated matrices, e.g. for the NV center reduced to a TLS
         if trunc:
-            return q.qeye(2), q.Qobj(Sx[1:, 1:]), q.Qobj(Sy[1:, 1:]), q.Qobj(Sz[1:, 1:])
+            spin_matrices = (
+                q.qeye(2),
+                q.Qobj(Sx[1:, 1:]),
+                q.Qobj(Sy[1:, 1:]),
+                q.Qobj(Sz[1:, 1:]),
+            )
 
-        return q.qeye(3), Sx, Sy, Sz
+        else:
+            spin_matrices = q.qeye(3), Sx, Sy, Sz
 
     # spin-1/2 matrices, e.g., for the C-13 nuclear spin
-    if spin == 1 / 2:
+    elif spin == 1 / 2:
         sx = hbar * q.spin_Jx(1 / 2)
         sy = hbar * q.spin_Jy(1 / 2)
         sz = hbar * q.spin_Jz(1 / 2)
-        return q.qeye(2), sx, sy, sz
+        spin_matrices = q.qeye(2), sx, sy, sz
+
+    return spin_matrices
 
 
 def adjust_space_dim(num_spins, operator, position):
@@ -108,7 +117,7 @@ def get_dipolar_matrix(pos1, pos2, gamma1, gamma2, suter_method=False):
 
 
 def calc_spin_positions(Azz, Azx, gamma1, gamma2, suter_method=False):
-    """Calculates the spin positions from the dipolar interaction constants.
+    r"""Calculates the spin positions from the dipolar interaction constants.
 
     Notes
     -----
@@ -116,16 +125,18 @@ def calc_spin_positions(Azz, Azx, gamma1, gamma2, suter_method=False):
         Azz, Azx in [[-0.152e6, 0.110e6], [-0.198e6, 0.328e6], [-0.228e6, 0.164e6], [-0.304e6, 0.247e6]]
         - The positions are given in cartesian coordinates.
         - It is assumed that the couplings are given in units of frequency (not angular frequency).
-        - Since Suter does not devide by 2pi (he uses $h$ instead of $\hbar$), his coordinates get scaled by a factor np.cbrt(2*np.pi)=1.85.
+        - Since Suter does not devide by 2pi (he uses :math:`h` instead of :math:`\hbar`), his coordinates get scaled by a factor np.cbrt(2*np.pi)=1.85.
     """
 
     # System of equations to solve
-    def equations(vars):
+    def equations(variables):
         if suter_method:
             prefactor = -(c.h * c.mu_0) / (4 * np.pi) * gamma1 * gamma2 / (2 * np.pi)
         else:
-            prefactor = -(c.hbar * c.mu_0) / (4 * np.pi) * gamma1 * gamma2 / (2 * np.pi)  #
-        r, theta = vars
+            prefactor = (
+                -(c.hbar * c.mu_0) / (4 * np.pi) * gamma1 * gamma2 / (2 * np.pi)
+            )  #
+        r, theta = variables
         eq1 = (prefactor / r**3) * (3 * np.cos(theta) ** 2 - 1) - Azz
         eq2 = (prefactor / r**3) * (3 * np.cos(theta) * np.sin(theta)) - Azx
         return [eq1, eq2]
@@ -133,13 +144,16 @@ def calc_spin_positions(Azz, Azx, gamma1, gamma2, suter_method=False):
     initial_guess = [1e-10, np.pi / 2]
     r, theta = fsolve(equations, initial_guess)
     pos = spherical_to_cartesian(r, 0, theta)
-    dipolar_matrix = get_dipolar_matrix((0,0,0), pos, gamma1, gamma2, suter_method=suter_method)
-    if DEFAULTS['verbose']:
+    dipolar_matrix = get_dipolar_matrix(
+        (0, 0, 0), pos, gamma1, gamma2, suter_method=suter_method
+    )
+    if DEFAULTS["verbose"]:
         print(dipolar_matrix)
-    if np.allclose([dipolar_matrix[2, 2], dipolar_matrix[2, 0]], [Azz, Azx]):
-        return pos
-    else:
-        return None
+
+    if not np.allclose([dipolar_matrix[2, 2], dipolar_matrix[2, 0]], [Azz, Azx]):
+        print("Failed")
+
+    return pos
 
 
 def calc_H_int(S1, S2, dipolar_matrix):

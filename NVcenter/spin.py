@@ -59,7 +59,7 @@ class Spin:
             )
 
         # --------------------------------------------
-        
+
         if self.spin_type == "NV0":
             self.spin_dim = 2
             self.gamma = CONST["gamma_e"]
@@ -70,7 +70,7 @@ class Spin:
             )  # truncated to m_s = 0 and m_s = -1
 
             # The NV center transition is only driven by the microwave field from outside causing the Rabi oscillations
-            self.H = q.Qobj([[0,0],[0,0]])
+            self.H = q.Qobj([[0, 0], [0, 0]])
 
         # --------------------------------------------
 

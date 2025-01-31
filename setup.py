@@ -15,6 +15,7 @@ def read_version():
             if line.startswith("__version__"):
                 return line.split("=")[1].strip().strip('"')
 
+
 setup(
     name="NVcenter",
     version=read_version(),

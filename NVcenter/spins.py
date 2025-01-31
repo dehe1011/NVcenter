@@ -35,16 +35,22 @@ class Spins:
         # register porperties
         self.register_config = register_config
         self.register_num_spins = len(self.register_config)
-        self.register_spin_types, self.register_spin_pos, self.register_init_spin, _ = list(zip(*self.register_config))
+        self.register_spin_types, self.register_spin_pos, self.register_init_spin, _ = (
+            list(zip(*self.register_config))
+        )
 
         # bath properties
         self.bath_config = bath_config
         self.bath_num_spins = len(self.bath_config)
         if self.bath_num_spins > 0:
-            self.bath_spin_types, self.bath_spin_pos, self.bath_init_spin, _ = list(zip(*self.bath_config))
+            self.bath_spin_types, self.bath_spin_pos, self.bath_init_spin, _ = list(
+                zip(*self.bath_config)
+            )
 
         # list of instances of Spin class (for each spin in the register and bath)
-        self.register_spins = [Spin(*spin_config) for spin_config in self.register_config]
+        self.register_spins = [
+            Spin(*spin_config) for spin_config in self.register_config
+        ]
         if self.bath_num_spins > 0:
             self.bath_spins = [Spin(*spin_config) for spin_config in self.bath_config]
 
@@ -71,19 +77,18 @@ class Spins:
         idx_gCCE2 = list(combinations(range(self.bath_num_spins), 2))
         if "P1" not in self.bath_spin_types:
             return idx_gCCE2
-        else:
-            idx_gCCE2 = []
-            for i, j in combinations(range(self.bath_num_spins), 2):
-                distance_NV = np.linalg.norm(
-                    np.array(self.bath_spin_pos[i])
-                    - np.array(self.register_spin_pos[0])
-                )
-                distance_P1 = np.linalg.norm(
-                    np.array(self.bath_spin_pos[i]) - np.array(self.bath_spin_pos[j])
-                )
-                if distance_NV < self.gCCE2_distance and distance_P1 < self.gCCE2_distance:
-                    idx_gCCE2.append((i, j))
-            return idx_gCCE2
+
+        idx_gCCE2 = []
+        for i, j in combinations(range(self.bath_num_spins), 2):
+            distance_NV = np.linalg.norm(
+                np.array(self.bath_spin_pos[i]) - np.array(self.register_spin_pos[0])
+            )
+            distance_P1 = np.linalg.norm(
+                np.array(self.bath_spin_pos[i]) - np.array(self.bath_spin_pos[j])
+            )
+            if distance_NV < self.gCCE2_distance and distance_P1 < self.gCCE2_distance:
+                idx_gCCE2.append((i, j))
+        return idx_gCCE2
 
     def get_config_lists(self):
         """Returns the system and mean-field configurations."""
@@ -129,7 +134,7 @@ class Spins:
 
     def get_spins_lists(self):
         """Returns the system and mean-field spins needed to set up the Hamiltonian for different approximation levels."""
-        
+
         system_spins_list, mf_spins_list = [], []
 
         if self.approx_level == "no_bath":

@@ -11,7 +11,8 @@ DATA_DIR = os.path.join(ROOT_DIR, PROJECT_NAME, "data")
 
 from .utils import *
 
-import matplotlib as mpl
+import matplotlib as mpl  # pylint: disable=wrong-import-order
+
 mpl.rcdefaults()
 try:
     mpl.style.use("qDNA-default")

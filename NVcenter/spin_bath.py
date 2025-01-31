@@ -8,7 +8,10 @@ from .helpers import spherical_to_cartesian
 
 # ------------------------------------------------------------
 
-def get_spin_bath(spin_type, abundancy, rmin, rmax, pos_seed=123, init_state_seed=123, lamor_seed=123):
+
+def get_spin_bath(
+    spin_type, abundancy, rmin, rmax, pos_seed=123, init_state_seed=123, lamor_seed=123
+):
     """Return a random spin bath configuration."""
 
     num_spins = calc_num_spins(abundancy, rmin, rmax)
@@ -23,7 +26,9 @@ def get_spin_bath(spin_type, abundancy, rmin, rmax, pos_seed=123, init_state_see
     config = list(zip(spin_types, spin_pos, init_states, kwargs))
     return config
 
+
 # ------------------------------------------------------------
+
 
 def calc_num_spins(abundancy, rmin, rmax):
     """Calculates the number of bath spins in a given volume. Equals the expectation value of the binomial distribution (n*p)."""
@@ -42,7 +47,7 @@ def calc_num_spins(abundancy, rmin, rmax):
 def choose_spin_pos(seed, num_spins, rmin, rmax):
     """Returns random positions of impurity spins in cartesian coordinates with a given volume."""
     random.seed(seed)
-    
+
     r_vals, theta_vals, phi_vals = [], [], []
     for _ in range(num_spins):
         r_vals.append(random.uniform(rmin**3, rmax**3) ** (1 / 3))
@@ -51,8 +56,8 @@ def choose_spin_pos(seed, num_spins, rmin, rmax):
 
     spin_pos = []
     for r, theta, phi in zip(r_vals, theta_vals, phi_vals):
-        spin_pos.append( spherical_to_cartesian(r, phi, theta) )
-    
+        spin_pos.append(spherical_to_cartesian(r, phi, theta))
+
     return spin_pos
 
 
@@ -63,7 +68,7 @@ def choose_init_states(seed, num_spins):
 
 
 def choose_lamor_disorders(seed, num_spins):
-    """Returns the disorder in the Lamor frequencies of P1 centers due to the hyperfine coupling between nitrogen nuclear spin and the electron 
+    """Returns the disorder in the Lamor frequencies of P1 centers due to the hyperfine coupling between nitrogen nuclear spin and the electron
     (that couples to the NV center). This effect depends on the nitrogen spin and P1 center delocalization axis (due to the Jahn-Teller effect).
     """
     random.seed(seed)
@@ -76,13 +81,16 @@ def choose_lamor_disorders(seed, num_spins):
         for i in range(num_spins)
     ]
 
+
 # -------------------------------------------------
 
-def save_spin_baths(
-    filename, directory, spin_type, abundancy, rmin, rmax, num_baths, num_init_states):
+
+def calc_spin_baths(
+    filename, directory, spin_type, abundancy, rmin, rmax, num_baths, num_init_states
+):
     """Save spin bath configurations as a JSON file."""
 
-    spin_configs = [ [None] * num_init_states for _ in range(num_baths) ]
+    spin_configs = [[None] * num_init_states for _ in range(num_baths)]
 
     for bath_idx in range(num_baths):
         for init_state_idx in range(num_init_states):
@@ -107,6 +115,7 @@ def save_spin_baths(
     save_spin_baths(spin_configs, metadata, directory, filename)
 
     return spin_configs
+
 
 def save_spin_baths(spin_configs, metadata, directory, filename):
     spin_configs = {"Configurations": spin_configs, "Metadata": metadata}

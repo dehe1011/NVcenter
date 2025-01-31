@@ -20,7 +20,7 @@ dependencies = [
     "matplotlib",
     "qiskit",
     "pathos",
-
+    "tqdm",
 ]
 
 [project.urls]

@@ -10,6 +10,7 @@ from .. import ROOT_DIR, PROJECT_NAME
 
 # -------------------------------------------------
 
+
 def install_style():
     """
     Install the custom Matplotlib style for the QuantumDNA project.
@@ -23,12 +24,12 @@ def install_style():
     config_dir = mpl.get_configdir()
     stylelib_dir = os.path.join(config_dir, "stylelib")
     os.makedirs(stylelib_dir, exist_ok=True)
-    mplstyle_path = os.path.join(ROOT_DIR, PROJECT_NAME, "qDNA-default.mplstyle")
+    mplstyle_path = os.path.join(ROOT_DIR, PROJECT_NAME, "NVcenter-default.mplstyle")
     shutil.copy(mplstyle_path, stylelib_dir)
     plt.style.reload_library()
 
 
-# install_style()
+install_style()
 
 
 def timeit(f):
@@ -61,4 +62,3 @@ def timeit(f):
         return result
 
     return timed
-

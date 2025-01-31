@@ -15,19 +15,20 @@ def H_Suter():
         flip in the NV center (will not happen because of the big energy level splitting).
     """
 
-    D = 2.87e9
-    ve = -414e6
+    # D = 2.87e9
+    # ve = -414e6
     vc = 0.158e6
-    A_N = -2.16e6
+    # A_N = -2.16e6
     A_zz = -0.152e6
     A_zx = 0.110e6
 
     sz = q.sigmaz() * 0.5
     sx = q.sigmax() * 0.5
     sz_NV = q.Qobj(np.array([[0, 0], [0, -1]]))
-    NV_energy_barrier = D * adjust_space_dim(2, sz_NV**2, 0) - (
-        ve - A_N
-    ) * adjust_space_dim(2, sz_NV, 0)
+    # NV_energy_barrier = D * adjust_space_dim(2, sz_NV**2, 0) - (
+    #     ve - A_N
+    # ) * adjust_space_dim(2, sz_NV, 0)
+
     H = (
         -vc * adjust_space_dim(2, sz, 1)
         + A_zz * q.tensor(sz_NV, sz)
@@ -47,11 +48,15 @@ def calc_hadamard_pulse_seq(C13_pos, suter_method=False):
 
     spin1, spin2 = spins.register_spins
     dipolar_matrix = get_dipolar_matrix(
-        spin1.spin_pos, spin2.spin_pos, spin1.gamma, spin2.gamma, suter_method=suter_method
+        spin1.spin_pos,
+        spin2.spin_pos,
+        spin1.gamma,
+        spin2.gamma,
+        suter_method=suter_method,
     )
     A_zz = dipolar_matrix[2, 2]
     A_zx = dipolar_matrix[0, 2]
-    ve = CONST["gamma_e"] * CONST["Bz"] / (2 * np.pi)
+    # ve = CONST["gamma_e"] * CONST["Bz"] / (2 * np.pi)
     vc = CONST["gamma_C"] * CONST["Bz"] / (2 * np.pi)
 
     v_minus = np.sqrt(A_zx**2 + (vc + A_zz) ** 2)

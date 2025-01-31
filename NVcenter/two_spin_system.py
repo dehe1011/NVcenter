@@ -30,7 +30,11 @@ class TwoSpinSystem:
 
         # Calculate Hamiltonians
         self.dipolar_matrix = get_dipolar_matrix(
-            self.spin1.spin_pos, self.spin2.spin_pos, self.spin1.gamma, self.spin2.gamma, suter_method=suter_method
+            self.spin1.spin_pos,
+            self.spin2.spin_pos,
+            self.spin1.gamma,
+            self.spin2.gamma,
+            suter_method=suter_method,
         )
         self.H_int = calc_H_int(self.S1, self.S2, self.dipolar_matrix)
         self.H = self._calc_H()
