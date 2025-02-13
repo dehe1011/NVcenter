@@ -60,8 +60,10 @@ class Environment(Pulse, gym.Env):
         self.observation = get_observation(self.register_init_state)
         self.done = False
 
-        self.action_space = gym.spaces.Box(low=-1, high= 1, shape=(3,), dtype=np.float32)
-        self.observation_space = gym.spaces.Box(low=-1, high=1, shape=(32,), dtype=np.float64)
+        self.action_space = gym.spaces.Box(low=-1, high=1, shape=(3,), dtype=np.float32)
+        self.observation_space = gym.spaces.Box(
+            low=-1, high=1, shape=(32,), dtype=np.float64
+        )
 
     # ----------------------------------------------
 
@@ -88,7 +90,7 @@ class Environment(Pulse, gym.Env):
 
         pulse_seq = [*self.action0 + [0], *self.action1, *self.action2]
         state = self.get_new_register_states(pulse_seq)[0]
-        self.observation = np.ones(32) #get_observation(state)
+        self.observation = np.ones(32)  # get_observation(state)
 
         self.fidelity = self.get_values(pulse_seq, "fidelity")[0]
 
@@ -111,7 +113,7 @@ class Environment(Pulse, gym.Env):
 
     def reset(self, seed=None, options=None):
         """Reset the environment to the initial state before any pulses were applied. Resets everything changed by the step function."""
-        
+
         super().__init__(self.register_config, [], **self.kwargs)
         gym.Env.reset(self, seed=seed)
 
@@ -120,7 +122,7 @@ class Environment(Pulse, gym.Env):
         self.fidelity = self.get_values([0], "fidelity")[0]
         self.info = {"Fidelity": self.fidelity}
         self.reward = 0
-        self.observation = np.ones(32) #get_observation(self.register_init_state)
+        self.observation = np.ones(32)  # get_observation(self.register_init_state)
         self.done = False
 
         return self.observation, self.info
@@ -139,7 +141,7 @@ class Environment(Pulse, gym.Env):
             self.approx_level = self.env_approx_level
             values_full = self.calc_values_full(observable, t_list)
             return values_full[0]
-        
+
         message = "Calculating another bath configuration"
         disable_tqdm = not self.verbose
 
@@ -147,7 +149,9 @@ class Environment(Pulse, gym.Env):
             values_baths = 0
             self.bath_config = self.bath_configs[0]
             self.approx_level = "full_bath"
-            for i in tqdm(range(self.num_bath_configs), desc=message, disable=disable_tqdm):
+            for i in tqdm(
+                range(self.num_bath_configs), desc=message, disable=disable_tqdm
+            ):
                 self.bath_config = self.bath_configs[i]
                 values_full = self.calc_values_full(observable, t_list)
                 values_baths += np.array(values_full[0])
@@ -217,17 +221,19 @@ class Environment(Pulse, gym.Env):
             self.approx_level = self.env_approx_level
             new_states_full = self.calc_new_register_states_full(t_list)
             return new_states_full[0]
-        
+
         message = "Calculating another bath configuration"
         disable_tqdm = not self.verbose
 
         if self.env_approx_level == "full_bath":
             states_baths = 0
-            for i in tqdm(range(self.num_bath_configs), desc=message, disable=disable_tqdm):
+            for i in tqdm(
+                range(self.num_bath_configs), desc=message, disable=disable_tqdm
+            ):
                 self.bath_config = self.bath_configs[i]
                 self.approx_level = "full_bath"
                 states_full = self.calc_new_register_states_full(t_list)
-                states_baths +=np.array(
+                states_baths += np.array(
                     [q.Qobj(state, dims=self.dims) for state in states_full[0]]
                 )
             return 1 / self.num_bath_configs * states_baths

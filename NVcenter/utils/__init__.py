@@ -5,4 +5,3 @@ from .dm_analysis import *
 from .dipolar_interaction import *
 
 install_mpl_style()
-

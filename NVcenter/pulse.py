@@ -92,7 +92,9 @@ class Pulse(Hamiltonian):
         super().__init__(self.register_config, **kwargs)
 
         # Keyword arguments
-        self.old_register_state = kwargs.get("old_register_state", self.register_init_state)
+        self.old_register_state = kwargs.get(
+            "old_register_state", self.register_init_state
+        )
         self.target = kwargs.get("target", self.register_identity)
         self._pulse_seq = kwargs.get("pulse_seq", DEFAULTS["pulse_seq"])
         self.dynamical_decoupling = kwargs.get(
@@ -108,6 +110,7 @@ class Pulse(Hamiltonian):
 
         # Initial
         self.matrices = []
+
     # ------------------------------------------------
 
     @property
@@ -270,9 +273,9 @@ class Pulse(Hamiltonian):
         eigs.append(eigs_free)
 
         if not self.instant_pulses:
-            rabi_frequency = 2*np.pi*self.rabi_frequency
+            rabi_frequency = 2 * np.pi * self.rabi_frequency
             for phi in self.phi_list:
-                rot_matrix = self.calc_H_rot(rabi_frequency, phi, theta=np.pi/2)
+                rot_matrix = self.calc_H_rot(rabi_frequency, phi, theta=np.pi / 2)
 
                 eigv_rot, eigs_rot = np.linalg.eigh((free_matrix + rot_matrix).full())
                 eigv.append(eigv_rot)
@@ -457,7 +460,7 @@ class Pulse(Hamiltonian):
             if self.verbose:
                 print("Pulse matrices already calculated.")
             return self.pulse_matrices_full
-        
+
         t0 = time.time()
 
         # progress bar properties
@@ -499,7 +502,7 @@ class Pulse(Hamiltonian):
         t1 = time.time()
         if self.verbose:
             print(f"Time to calculate the pulse matrices: {t1-t0} s.")
-        
+
         return self.pulse_matrices_full
 
     # ---------------------------------------------------
@@ -511,7 +514,7 @@ class Pulse(Hamiltonian):
         # loop over timesteps
         new_register_states = []
         for pulse_matrix in pulse_matrices:
-            
+
             new_system_state = pulse_matrix * old_system_states[i] * pulse_matrix.dag()
 
             # reduce from system to register space by tracing out

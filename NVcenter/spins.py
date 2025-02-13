@@ -36,7 +36,9 @@ class Spins:
         # register porperties
         self.register_config = register_config
         self.register_num_spins = len(self.register_config)
-        self.register_spin_types, self.register_spin_pos, self.register_init_spin, _ = list(zip(*self.register_config))
+        self.register_spin_types, self.register_spin_pos, self.register_init_spin, _ = (
+            list(zip(*self.register_config))
+        )
 
         # bath properties
         self.bath_config = kwargs.get("bath_config", [])
@@ -49,11 +51,9 @@ class Spins:
         # list of instances of Spin class (for each spin in the register and bath)
         self.register_spins = [
             Spin(*spin_config) for spin_config in self.register_config
-            ]
+        ]
         if self.bath_num_spins > 0:
-            self.bath_spins = [
-                Spin(*spin_config) for spin_config in self.bath_config
-                ]
+            self.bath_spins = [Spin(*spin_config) for spin_config in self.bath_config]
 
         # indices of bath spins that are simulated exactly in the corresponding gCCE approximation
         if self.bath_num_spins > 0:
@@ -69,16 +69,15 @@ class Spins:
     # -------------------------------------------------
 
     def get_idx_gCCE1(self):
-        """ Returns indices of bath spins with a separation smaller than gCCE1_distance.
-        For larger distances the interaction can be neglected. """
-        
+        """Returns indices of bath spins with a separation smaller than gCCE1_distance.
+        For larger distances the interaction can be neglected."""
+
         idx_gCCE1 = list(range(self.bath_num_spins))
         return idx_gCCE1
 
-
     def get_idx_gCCE2(self):
-        """ Returns indices of two bath spins with a separation smaller than gCCE2_distance.
-        For larger distances the interaction can be neglected. """
+        """Returns indices of two bath spins with a separation smaller than gCCE2_distance.
+        For larger distances the interaction can be neglected."""
 
         idx_gCCE2 = list(combinations(range(self.bath_num_spins), 2))
         if "P1" not in self.bath_spin_types:
@@ -95,7 +94,7 @@ class Spins:
             if distance_NV < self.gCCE2_cutoff and distance_P1 < self.gCCE2_cutoff:
                 idx_gCCE2.append((i, j))
         return idx_gCCE2
-    
+
     # -------------------------------------------------
 
     def get_config_lists(self):
@@ -175,5 +174,6 @@ class Spins:
                 )
 
         return system_spins_list, mf_spins_list
+
 
 # -------------------------------------------------

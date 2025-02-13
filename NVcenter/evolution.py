@@ -13,6 +13,7 @@ from .utils import calc_fidelity, calc_logarithmic_negativity, spherical_to_cart
 
 # -------------------------------------------------
 
+
 def get_cnot_gate(num_qubits, control, target):
     """Returns the CNOT gate for a given number of qubits, control and target qubit."""
 
@@ -32,10 +33,12 @@ def get_hada_gate(num_qubits, target):
     hada_gate = Operator(qc).data
     return q.Qobj(hada_gate, dims=dims)
 
+
 # -------------------------------------------------
 
+
 class Evolution(Hamiltonian):
-    
+
     def __init__(self, register_config, **kwargs):
         self.t0 = time.time()
         self._register_config = register_config
@@ -48,13 +51,17 @@ class Evolution(Hamiltonian):
         super().__init__(self.register_config, **kwargs)
 
         # Keyword arguments
-        self.old_register_states = kwargs.get("old_register_states", [self.register_init_state])
+        self.old_register_states = kwargs.get(
+            "old_register_states", [self.register_init_state]
+        )
         self.target = kwargs.get("target", self.register_identity)
-        self._gate_props_list = kwargs.get("gate_props_list", DEFAULTS["gate_props_list"])
+        self._gate_props_list = kwargs.get(
+            "gate_props_list", DEFAULTS["gate_props_list"]
+        )
         self.dynamical_decoupling = kwargs.get(
             "dynamical_decoupling", DEFAULTS["dynamical_decoupling"]
         )
-    
+
         self.rabi_frequency = kwargs.get("rabi_frequency", DEFAULTS["rabi_frequency"])
         self.dm_offset = kwargs.get("dm_offset", DEFAULTS["dm_offset"])
         self.num_hahn_echos = kwargs.get("num_hahn_echos", DEFAULTS["num_hahn_echos"])
@@ -66,7 +73,6 @@ class Evolution(Hamiltonian):
         # Save the quantum states
         self.states = None
 
-
     @property
     def t_list(self):  # pylint: disable=missing-function-docstring
         return self._t_list
@@ -77,7 +83,7 @@ class Evolution(Hamiltonian):
             self._t_list = new_t_list
 
             if isinstance(self._t_list, str):
-                if self._t_list == 'final':
+                if self._t_list == "final":
                     self._t_list = [self.total_gate_time]
 
                 if self._t_list == "auto":
@@ -95,7 +101,6 @@ class Evolution(Hamiltonian):
                 self._register_config,
                 **self.kwargs,
             )  # reinitialize the Hamiltonian
-
 
     @property
     def bath_config(self):  # pylint: disable=missing-function-docstring
@@ -137,16 +142,20 @@ class Evolution(Hamiltonian):
             self._gate_props_list = new_gate_props_list
             self.init_gate_times()
 
-# -------------------------------------------------
+    # -------------------------------------------------
 
     def init_gate_times(self, **kwargs):
-        self.gate_time_list = [gate_props[1].get('t',0) for gate_props in self.gate_props_list]
-        self.cum_gate_time_list = [sum(self.gate_time_list[: i + 1]) for i in range(len(self.gate_time_list))]
+        self.gate_time_list = [
+            gate_props[1].get("t", 0) for gate_props in self.gate_props_list
+        ]
+        self.cum_gate_time_list = [
+            sum(self.gate_time_list[: i + 1]) for i in range(len(self.gate_time_list))
+        ]
         self.total_gate_time = sum(self.gate_time_list)
-        
+
         self._t_list = kwargs.get("t_list", "final")
         if isinstance(self._t_list, str):
-            if self._t_list == 'final':
+            if self._t_list == "final":
                 self._t_list = [self.total_gate_time]
 
             if self._t_list == "auto":
@@ -166,56 +175,68 @@ class Evolution(Hamiltonian):
         t_list.append(t_cum[-1])
 
         return np.real(sorted(t_list))
-    
+
     def get_gate_props_list_time(self, t_list):
 
         if self.cum_gate_time_list == []:
-            return [('free_evo', dict(t=0., dynamical_decoupling=False))]
+            return [("free_evo", dict(t=0.0, dynamical_decoupling=False))]
 
         gate_props_list_time = []
         t_cum = self.cum_gate_time_list
         left_time, finished_gates = 0, 0
         for t in t_list:
             if t == 0:
-                gate_props_list_time.append([('free_evo', dict(t=0., dynamical_decoupling=False))])
+                gate_props_list_time.append(
+                    [("free_evo", dict(t=0.0, dynamical_decoupling=False))]
+                )
                 continue
 
             # Find the number of finished gates and the left time
             threshold = t
             for i, time in enumerate(t_cum):
                 if time <= threshold:
-                    finished_gates = i+1
+                    finished_gates = i + 1
                 else:
                     break
-            
+
             if finished_gates == 0:
                 left_time = threshold
-            else: 
-                left_time = threshold - t_cum[finished_gates-1]
+            else:
+                left_time = threshold - t_cum[finished_gates - 1]
 
             # Create a list of the finished gates
-            new_gate_props_list = copy.deepcopy(self.gate_props_list[:finished_gates])  # Deep copy
-            
+            new_gate_props_list = copy.deepcopy(
+                self.gate_props_list[:finished_gates]
+            )  # Deep copy
+
             if left_time != 0:
                 # add free evolution after the last gate if all gates are finished
                 if finished_gates == len(self.gate_props_list):
-                    hahn_time = float(left_time/(self.num_hahn_echos+1))
-                    after_gates = [("free_evo", dict(t=hahn_time, dynamical_decoupling=False))]
+                    hahn_time = float(left_time / (self.num_hahn_echos + 1))
+                    after_gates = [
+                        ("free_evo", dict(t=hahn_time, dynamical_decoupling=False))
+                    ]
                     for _ in range(self.num_hahn_echos):
-                        after_gates.append( ("inst_rot", dict(alpha=np.pi, phi=0, theta=np.pi/2)) )
-                        after_gates.append( ("free_evo", dict(t=hahn_time, dynamical_decoupling=False)) )
-                    new_gate_props_list.extend( after_gates )
-            
+                        after_gates.append(
+                            ("inst_rot", dict(alpha=np.pi, phi=0, theta=np.pi / 2))
+                        )
+                        after_gates.append(
+                            ("free_evo", dict(t=hahn_time, dynamical_decoupling=False))
+                        )
+                    new_gate_props_list.extend(after_gates)
+
                 # add a fraction of the next gate if there is time left
                 else:
-                    current_gate = copy.deepcopy(self.gate_props_list[finished_gates])  # Deep copy of current_gate
-                    current_gate[1]['t'] = float(left_time)
+                    current_gate = copy.deepcopy(
+                        self.gate_props_list[finished_gates]
+                    )  # Deep copy of current_gate
+                    current_gate[1]["t"] = float(left_time)
                     new_gate_props_list.append(current_gate)
 
             gate_props_list_time.append(new_gate_props_list)
         return gate_props_list_time
 
-# ------------------------------------------------
+    # ------------------------------------------------
 
     def calc_H_rot(self, omega, phi, theta=np.pi / 2):
         """Returns a Hamiltonian that rotates the first register spin (NV center) with the Lamor
@@ -252,7 +273,7 @@ class Evolution(Hamiltonian):
         )
         return U_time.to(data_type="CSR")
 
-# ---------------------------------------------------
+    # ---------------------------------------------------
 
     def calc_eigensystem(self):
         """Saves the eigensystem of the free Hamiltonian and of the rotation
@@ -261,11 +282,11 @@ class Evolution(Hamiltonian):
 
         eigv_free, eigs_free = [], []
         for matrix in matrices:
-            matrix *= 2*np.pi # convert to angular frequency
+            matrix *= 2 * np.pi  # convert to angular frequency
             eigv, eigs = np.linalg.eigh(matrix.full())
             eigv_free.append(eigv)
             eigs_free.append(eigs)
-        
+
         self.eigv_free, self.eigs_free = eigv_free, eigs_free
         return self.eigv_free, self.eigs_free
 
@@ -279,18 +300,20 @@ class Evolution(Hamiltonian):
         matrices = self.calc_matrices()
 
         for i, matrix in enumerate(matrices):
-            matrix *= 2*np.pi # convert to angular frequency
-            
+            matrix *= 2 * np.pi  # convert to angular frequency
+
             if gate_type == "free_evo":
                 if self.eigv_free is None or self.eigs_free is None:
                     self.calc_eigensystem()
                 eigv, eigs = self.eigv_free[i], self.eigs_free[i]
 
-                t = gate_params.get('t', 0)
-                dynamical_decoupling = gate_params.get('dynamical_decoupling', self.dynamical_decoupling)
+                t = gate_params.get("t", 0)
+                dynamical_decoupling = gate_params.get(
+                    "dynamical_decoupling", self.dynamical_decoupling
+                )
 
                 if dynamical_decoupling:
-                    dyn_dec_time = gate_params.get('dyn_dec_time', t/2)
+                    dyn_dec_time = gate_params.get("dyn_dec_time", t / 2)
                     difference = t - dyn_dec_time
                     if difference >= 0:
                         before_gate = self.calc_U_time(eigv, eigs, dyn_dec_time)
@@ -299,44 +322,52 @@ class Evolution(Hamiltonian):
                         # XGate = self.calc_U_time(eigv_rot, eigs_rot, 1/(2*self.rabi_frequency))
                         XGate = self.calc_U_rot(np.pi, 0, theta=np.pi / 2)
                         gate = before_gate * XGate * after_gate
-                    else: 
+                    else:
                         gate = self.calc_U_time(eigv, eigs, t)
-                    
-                else: 
+
+                else:
                     gate = self.calc_U_time(eigv, eigs, t)
                 single_gates[i] = gate
 
             if gate_type == "inst_rot":
-                alpha = gate_params.get('alpha', 0)
-                phi, theta = gate_params.get('phi', 0), gate_params.get('theta', np.pi/2) 
+                alpha = gate_params.get("alpha", 0)
+                phi, theta = gate_params.get("phi", 0), gate_params.get(
+                    "theta", np.pi / 2
+                )
                 gate = self.calc_U_rot(alpha, phi, theta=theta)
                 single_gates[i] = gate
 
-            if gate_type == "cont_rot":          
-                rabi_frequency = 2*np.pi*self.rabi_frequency # convert to angular frequency
-                phi, theta = gate_params.get('phi', 0), gate_params.get('theta', np.pi/2) 
+            if gate_type == "cont_rot":
+                rabi_frequency = (
+                    2 * np.pi * self.rabi_frequency
+                )  # convert to angular frequency
+                phi, theta = gate_params.get("phi", 0), gate_params.get(
+                    "theta", np.pi / 2
+                )
                 rot_matrix = self.calc_H_rot(rabi_frequency, phi, theta=theta)
                 eigv, eigs = np.linalg.eigh((matrix + rot_matrix).full())
 
-                t = gate_params.get('t', 0)
+                t = gate_params.get("t", 0)
                 gate = self.calc_U_time(eigv, eigs, t)
                 single_gates[i] = gate
-        return single_gates 
-    
+        return single_gates
+
     def get_gates(self, gate_props_list=None):
 
         if gate_props_list is None:
             gate_props_list = self.gate_props_list
 
         gates = np.ones(self.num_systems, dtype=object)
-        gate_props_list_inv = gate_props_list[::-1] # because multiplication happens right to left
+        gate_props_list_inv = gate_props_list[
+            ::-1
+        ]  # because multiplication happens right to left
 
         for i, gate_props in enumerate(gate_props_list_inv):
             single_gates = self.get_single_gates(gate_props)
             gates *= single_gates
 
         return gates
-    
+
     def get_gates_time(self, t_list=None):
 
         # Return the gates if they have already been calculated
@@ -347,19 +378,18 @@ class Evolution(Hamiltonian):
 
         if t_list is None:
             t_list = self.t_list
-        gate_props_list_time = self.get_gate_props_list_time(t_list)	
-        
+        gate_props_list_time = self.get_gate_props_list_time(t_list)
+
         gates_time = np.zeros((len(t_list), self.num_systems), dtype=object)
-        for i, gate_props_list in enumerate(gate_props_list_time): 
+        for i, gate_props_list in enumerate(gate_props_list_time):
             gates = self.get_gates(gate_props_list)
             gates_time[i][:] = gates
 
         self.gates_time = gates_time
         return self.gates_time
-    
 
-# ---------------------------------------------------
-    
+    # ---------------------------------------------------
+
     def get_states(self, t_list=None, old_register_states=None):
 
         # Return the states if they have already been calculated
@@ -371,21 +401,32 @@ class Evolution(Hamiltonian):
         if old_register_states is None:
             old_register_states = self.old_register_states
 
-        states = np.zeros((len(old_register_states), len(t_list), self.num_systems), dtype=object)
-        
-        system_init_states_init = [self.calc_system_init_states(register_state) for register_state in old_register_states]
+        states = np.zeros(
+            (len(old_register_states), len(t_list), self.num_systems), dtype=object
+        )
+
+        system_init_states_init = [
+            self.calc_system_init_states(register_state)
+            for register_state in old_register_states
+        ]
         gates_time = self.get_gates_time(t_list)
 
         for i, system_init_states in enumerate(system_init_states_init):
             for j, gates in enumerate(gates_time):
                 for k, gate in enumerate(gates):
-                    new_state = q.ptrace( gate * system_init_states[k] * gate.dag(),  range(self.register_num_spins) )
-                    new_state += q.Qobj(np.ones(new_state.shape), dims=new_state.dims) * self.dm_offset
-                    states[i,j,k] = new_state
-            
+                    new_state = q.ptrace(
+                        gate * system_init_states[k] * gate.dag(),
+                        range(self.register_num_spins),
+                    )
+                    new_state += (
+                        q.Qobj(np.ones(new_state.shape), dims=new_state.dims)
+                        * self.dm_offset
+                    )
+                    states[i, j, k] = new_state
+
         self.states = states
         return self.states
-    
+
     def get_values(self, observable, t_list=None, old_register_states=None):
 
         states = self.get_states(t_list=t_list, old_register_states=old_register_states)
@@ -396,11 +437,11 @@ class Evolution(Hamiltonian):
 
         for i, state in enumerate(states):
             if observable == "fidelity":
-                values[i] = calc_fidelity(state, self.target) 
+                values[i] = calc_fidelity(state, self.target)
             elif observable == "log_neg":
                 values[i] = calc_logarithmic_negativity(state)
             else:
-                values[i] = q.expect(state, observable) 
+                values[i] = q.expect(state, observable)
 
         values = values.reshape(shape)
         return values

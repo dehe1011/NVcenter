@@ -3,6 +3,7 @@ import numpy as np
 
 # -----------------------------------------------
 
+
 def calc_logarithmic_negativity(rho, dim1=2, dim2=2):
     """Calculates the logarithmic negativity for a system of two qubits (i.e., the partial transpose wrt the second qubit)."""
 
@@ -21,5 +22,6 @@ def calc_fidelity(rho, rho_target):
     """Calculates the a simple measure of the fidelity as overlap between the quantum states."""
 
     return np.abs((rho_target.dag() * rho).tr() / (rho_target.dag() * rho_target).tr())
+
 
 # -----------------------------------------------

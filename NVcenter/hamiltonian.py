@@ -10,6 +10,7 @@ from .utils import get_dipolar_matrix, calc_H_int
 
 # -------------------------------------------------
 
+
 def adjust_space_dim(num_spins, operator, position):
     """Helper function to adjust the Hilbert space dimension of an operator to
     the number of spins in the system."""
@@ -18,7 +19,9 @@ def adjust_space_dim(num_spins, operator, position):
     operator_list[position] = operator
     return q.tensor(operator_list)
 
+
 # -------------------------------------------------
+
 
 class Hamiltonian(Spins):
     """
@@ -89,7 +92,7 @@ class Hamiltonian(Spins):
             spin_op = [adjust_space_dim(len(spins), op, i) for op in spin.S]
             spin_ops.append(spin_op)
         return spin_ops
-    
+
     # -------------------------------------------------
 
     def calc_register_init_state(self):
@@ -125,11 +128,11 @@ class Hamiltonian(Spins):
             bath_init_state = q.tensor([spin.init_state for spin in bath_spins])
             states.append(q.tensor(register_state, bath_init_state))
         return states
-    
+
     # -------------------------------------------------
-    
+
     def calc_H_system(self, system_spins):
-        """ Returns the Hamiltonian for the system spins. """
+        """Returns the Hamiltonian for the system spins."""
 
         system_num_spins = len(system_spins)
         H = 0
@@ -155,8 +158,8 @@ class Hamiltonian(Spins):
         return H
 
     def calc_H_mf(self, system_spins, mf_spins):
-        """ Returns the Hamiltonian for the mean-field spins (in the system Hilbert space).
-        Note: This only works for a spin-1/2 bath. """
+        """Returns the Hamiltonian for the mean-field spins (in the system Hilbert space).
+        Note: This only works for a spin-1/2 bath."""
 
         H = 0
         for i, system_spin in enumerate(system_spins):
@@ -178,9 +181,9 @@ class Hamiltonian(Spins):
         H_system = self.calc_H_system(self.system_spins_list[i])
         H_mf = self.calc_H_mf(self.system_spins_list[i], self.mf_spins_list[i])
         return H_system + H_mf
-    
+
     # -------------------------------------------------
-    
+
     def calc_matrices(self):
         """Returns the full Hamiltonian matrices for the system and mean-field spins
         for each pair of system and mean-field."""
@@ -203,5 +206,6 @@ class Hamiltonian(Spins):
             print(f"Time to calculate the Hamiltonians: {t1-t0} s.")
         self.matrices = matrices
         return self.matrices
-    
+
+
 # -------------------------------------------------

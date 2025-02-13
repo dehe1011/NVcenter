@@ -9,6 +9,7 @@ from .coordinates import spherical_to_cartesian
 
 # -----------------------------------------------
 
+
 def get_dipolar_matrix(pos1, pos2, gamma1, gamma2, suter_method=False):
     """Returns the magnetic dipolar matrix for two spins.
     Notes:
@@ -84,5 +85,6 @@ def calc_H_int(S1, S2, dipolar_matrix):
         for i, j in product(range(3), repeat=2)
     ]
     return sum(H_int_list)
+
 
 # -----------------------------------------------

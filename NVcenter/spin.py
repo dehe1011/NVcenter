@@ -5,6 +5,7 @@ from . import CONST
 
 # -------------------------------------------
 
+
 def get_spin_matrices(spin, trunc=False):
     """Returns the spin matrices.
     Notes:
@@ -43,7 +44,9 @@ def get_spin_matrices(spin, trunc=False):
 
     return spin_matrices
 
+
 # -------------------------------------------
+
 
 class Spin:
     """This class constructs the Hamiltonian and initial state from a given spin configuration.
@@ -69,7 +72,7 @@ class Spin:
         # --------------------------------------------
 
         # TLS NV center electron spin
-        if self.spin_type == "NV":  
+        if self.spin_type == "NV":
 
             # Zero-field splitting
             self.D_gs = self.kwargs.get("D_gs", CONST["D_gs"])
@@ -79,15 +82,15 @@ class Spin:
             self.N_zz = self.kwargs.get("N_zz", CONST["N_zz"])  # Dominik
             self.A_N = self.kwargs.get("A_N", CONST["A_N"])  # Suter
             # Frozen spin state of the nitrogen spin
-            self.m_N = self.kwargs.get("m_N", CONST["m_N"]) 
+            self.m_N = self.kwargs.get("m_N", CONST["m_N"])
 
             # Spin operators truncated to m_s = 0 and m_s = -1
             self.spin_dim = 2
             self.S = get_spin_matrices(spin=1, trunc=True)
 
-            # Hamiltonian                        
+            # Hamiltonian
             self.lamor = self.gamma * self.Bz / (2 * np.pi)  # -414.8 MHz
-            self.renormalization = self.m_N * self.N_zz # 1.76 MHz
+            self.renormalization = self.m_N * self.N_zz  # 1.76 MHz
             # self.renormalization = self.m_N * self.A_N # 2.16 MHz
 
             self.H = (
@@ -109,12 +112,12 @@ class Spin:
             self.spin_dim = 2
             self.S = get_spin_matrices(spin=1, trunc=True)
 
-            # Hamiltonian                        
+            # Hamiltonian
             self.H = q.Qobj([[0, 0], [0, 0]])
 
         # --------------------------------------------
 
-        # Surface electron spin 
+        # Surface electron spin
         if self.spin_type == "e":
 
             # gyromagnetic ratio
@@ -125,8 +128,8 @@ class Spin:
             self.S = get_spin_matrices(spin=1 / 2)
 
             # Hamiltonian
-            self.lamor = self.gamma * self.Bz / (2 * np.pi) # -414.8 MHz
-            self.H = - self.lamor * self.S[3]
+            self.lamor = self.gamma * self.Bz / (2 * np.pi)  # -414.8 MHz
+            self.H = -self.lamor * self.S[3]
 
         # --------------------------------------------
 
@@ -135,7 +138,7 @@ class Spin:
 
             # gyromagnetic ratio
             self.gamma = self.kwargs.get("gamma", CONST["gamma_C"])
-            
+
             # Spin operators
             self.spin_dim = 2
             self.S = get_spin_matrices(spin=1 / 2)
@@ -159,14 +162,14 @@ class Spin:
             self.JT_dict = self.kwargs.get("JT_dict", CONST["JT_dict"])
             self.nitrogen_spin = self.kwargs["nitrogen_spin"]
             self.axis = self.kwargs["axis"]
-            
+
             # Spin matrices
             self.spin_dim = 2
             self.S = get_spin_matrices(spin=1 / 2)
 
             # Hamiltonian
             self.lamor = self.gamma * self.Bz / (2 * np.pi)  # -414.8 MHz
-            self.lamor_disorder = (self.nitrogen_spin * self.JT_dict[self.axis])
+            self.lamor_disorder = self.nitrogen_spin * self.JT_dict[self.axis]
             self.H = -self.lamor * self.S[3] + self.lamor_disorder * self.S[3]
 
         # --------------------------------------------
@@ -182,15 +185,15 @@ class Spin:
             self.N_zz = self.kwargs.get("N_zz", CONST["N_zz"])  # Dominik
             self.A_N = self.kwargs.get("A_N", CONST["A_N"])  # Suter
             # Frozen spin state of the nitrogen spin
-            self.m_N = self.kwargs.get("m_N", CONST["m_N"]) 
+            self.m_N = self.kwargs.get("m_N", CONST["m_N"])
 
             # Spin operators
             self.spin_dim = 3
             self.S = get_spin_matrices(spin=1, trunc=False)
 
-            # Hamiltonian                        
+            # Hamiltonian
             self.lamor = self.gamma * self.Bz / (2 * np.pi)  # -414.8 MHz
-            self.renormalization = self.m_N * self.N_zz # 1.76 MHz
+            self.renormalization = self.m_N * self.N_zz  # 1.76 MHz
             # self.renormalization = self.m_N * self.A_N # 2.16 MHz
 
             self.H = (
@@ -202,13 +205,13 @@ class Spin:
         # --------------------------------------------
 
         # Nitrogen nuclear spin (N-14, not N-15)
-        if self.spin_type == "N": 
+        if self.spin_type == "N":
 
             # Zero-field splitting
             self.P_gs = self.kwargs.get("P_gs", CONST["P_gs"])
             # gyromagnetic ratio
             self.gamma = self.kwargs.get("gamma", CONST["gamma_N"])
-            
+
             # Spin matrices
             self.spin_dim = 3
             self.S = get_spin_matrices(spin=1)
@@ -220,5 +223,6 @@ class Spin:
         # --------------------------------------------
 
         self.init_state = q.fock_dm(self.spin_dim, self.init_spin)
+
 
 # -------------------------------------------
