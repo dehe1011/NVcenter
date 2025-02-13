@@ -8,14 +8,9 @@ from qiskit.circuit import QuantumCircuit
 from qiskit.quantum_info import Operator
 
 from . import DEFAULTS
-from .hamiltonian import Hamiltonian
-from .helpers import (
-    calc_fidelity,
-    calc_logarithmic_negativity,
-    spherical_to_cartesian,
-    get_spin_matrices,
-    adjust_space_dim,
-)
+from .hamiltonian import Hamiltonian, adjust_space_dim
+from .spin import get_spin_matrices
+from .utils import calc_fidelity, calc_logarithmic_negativity, spherical_to_cartesian
 
 # -------------------------------------------------
 
@@ -89,23 +84,17 @@ class Pulse(Hamiltonian):
     """
 
     def __init__(self, register_config, bath_config, **kwargs):
-
-        # Attributes with setters
-        self._approx_level = kwargs.get("approx_level", DEFAULTS["approx_level"])
+        self.t0 = time.time()
+        self._register_config = register_config
         self._bath_config = bath_config
-        self._pulse_seq = kwargs.get("pulse_seq", DEFAULTS["pulse_seq"])
-        self.kwargs = kwargs
+        self._approx_level = kwargs.get("approx_level", DEFAULTS["approx_level"])
 
-        super().__init__(
-            register_config, self.bath_config, self.approx_level, **self.kwargs
-        )
-
-        self._old_register_state = kwargs.get(
-            "old_register_state", self.register_init_state
-        )  # old register state
-        self._target = kwargs.get("target", self.register_identity)
+        super().__init__(self.register_config, **kwargs)
 
         # Keyword arguments
+        self.old_register_state = kwargs.get("old_register_state", self.register_init_state)
+        self.target = kwargs.get("target", self.register_identity)
+        self._pulse_seq = kwargs.get("pulse_seq", DEFAULTS["pulse_seq"])
         self.dynamical_decoupling = kwargs.get(
             "dynamical_decoupling", DEFAULTS["dynamical_decoupling"]
         )
@@ -117,19 +106,52 @@ class Pulse(Hamiltonian):
         # Initialize pulse sequence
         self.init_pulse_seq()
 
-        self.matrices = None
-        self.left_time = None
-
+        # Initial
+        self.matrices = []
     # ------------------------------------------------
 
     @property
-    def old_register_state(self):  # pylint: disable=missing-function-docstring
-        return self._old_register_state
+    def register_config(self):  # pylint: disable=missing-function-docstring
+        return self._register_config
 
-    @old_register_state.setter
-    def old_register_state(self, new_old_register_state):
-        if new_old_register_state != self.old_register_state:
-            self._old_register_state = new_old_register_state
+    @register_config.setter
+    def register_config(self, new_register_config):
+        if new_register_config != self._register_config:
+            self._register_config = new_register_config
+            super().__init__(
+                self._register_config,
+                **self.kwargs,
+            )  # reinitialize the Hamiltonian
+
+    @property
+    def bath_config(self):  # pylint: disable=missing-function-docstring
+        return self._bath_config
+
+    @bath_config.setter
+    def bath_config(self, new_bath_config):
+        if new_bath_config != self._bath_config:
+            self.pulse_matrices_full = []
+            self._bath_config = new_bath_config
+            self.kwargs["bath_config"] = new_bath_config
+            super().__init__(
+                self._register_config,
+                **self.kwargs,
+            )  # reinitialize the Hamiltonian
+
+    @property
+    def approx_level(self):  # pylint: disable=missing-function-docstring
+        return self._approx_level
+
+    @approx_level.setter
+    def approx_level(self, new_approx_level):
+        if new_approx_level != self._approx_level:
+            self.pulse_matrices_full = []
+            self._approx_level = new_approx_level
+            self.kwargs["approx_level"] = new_approx_level
+            super().__init__(
+                self.register_config,
+                **self.kwargs,
+            )  # reinitialize the Hamiltonian
 
     @property
     def pulse_seq(self):  # pylint: disable=missing-function-docstring
@@ -140,51 +162,6 @@ class Pulse(Hamiltonian):
         if list(new_pulse_seq) != list(self._pulse_seq):
             self._pulse_seq = new_pulse_seq
             self.init_pulse_seq()  # reinitialize the pulse sequence
-
-    @property
-    def approx_level(self):  # pylint: disable=missing-function-docstring
-        return self._approx_level
-
-    @approx_level.setter
-    def approx_level(self, new_approx_level):
-        assert new_approx_level in [
-            "no_bath",
-            "full_bath",
-            "gCCE0",
-            "gCCE1",
-            "gCCE2",
-        ], "Invalid approximation level."
-        if new_approx_level != self._approx_level:
-            self._approx_level = new_approx_level
-            super().__init__(
-                self.register_config,
-                self._bath_config,
-                self._approx_level,
-                **self.kwargs,
-            )  # reinitialize the Hamiltonian
-
-    @property
-    def target(self):  # pylint: disable=missing-function-docstring
-        return self._target
-
-    @target.setter
-    def target(self, new_target):
-        self._target = new_target
-
-    @property
-    def bath_config(self):  # pylint: disable=missing-function-docstring
-        return self._bath_config
-
-    @bath_config.setter
-    def bath_config(self, new_bath_config):
-        if new_bath_config != self._bath_config:
-            self._bath_config = new_bath_config
-            super().__init__(
-                self.register_config,
-                self._bath_config,
-                self._approx_level,
-                **self.kwargs,
-            )  # reinitialize the Hamiltonian
 
     # ------------------------------------------------
 
@@ -206,6 +183,7 @@ class Pulse(Hamiltonian):
         self.t_list = self.get_t_list()
 
         self.left_time = 0
+        self.pulse_matrices_full = []
 
     def get_t_list(self, stepsize=0.5e-6):
         """Helper function to get the time list for a pulse sequence."""
@@ -285,8 +263,6 @@ class Pulse(Hamiltonian):
         """Saves the eigensystem of the free Hamiltonian and of the rotation
         if the pulses are not instantaneous."""
 
-        # start_time = time.time()
-
         eigv, eigs = [], []
         free_matrix *= 2 * np.pi  # convert to angular frequency
         eigv_free, eigs_free = np.linalg.eigh(free_matrix.full())
@@ -294,19 +270,13 @@ class Pulse(Hamiltonian):
         eigs.append(eigs_free)
 
         if not self.instant_pulses:
-            rabi_frequency = (
-                2 * np.pi * self.rabi_frequency
-            )  # Rabi frequency as angular frequency
+            rabi_frequency = 2*np.pi*self.rabi_frequency
             for phi in self.phi_list:
-                rot_matrix = self.calc_H_rot(rabi_frequency, phi)
+                rot_matrix = self.calc_H_rot(rabi_frequency, phi, theta=np.pi/2)
 
                 eigv_rot, eigs_rot = np.linalg.eigh((free_matrix + rot_matrix).full())
                 eigv.append(eigv_rot)
                 eigs.append(eigs_rot)
-
-        # end_time = time.time()
-        # if self.verbose:
-        #     print(f"Time to calculate the eigensystem: {end_time-start_time} seconds.")
         return eigv, eigs
 
     def get_reduced_pulse_seq(self, t):
@@ -482,6 +452,12 @@ class Pulse(Hamiltonian):
     def calc_pulse_matrices_full(self, t_list):
         """Calculates the pulse matrices for each system at a given time t."""
 
+        # check if pulse matrices are already calculated
+        if self.pulse_matrices_full:
+            if self.verbose:
+                print("Pulse matrices already calculated.")
+            return self.pulse_matrices_full
+        
         t0 = time.time()
 
         # progress bar properties
@@ -498,16 +474,15 @@ class Pulse(Hamiltonian):
 
         # No Parallelization
         if not self.parallelization:
-            pulse_matrices_full = []
             for i in tqdm(range(self.num_systems), desc=message, disable=disable_tqdm):
-                pulse_matrices_full.append(
+                self.pulse_matrices_full.append(
                     self.calc_pulse_matrices(i, self.matrices, t_list)
                 )
 
         # Parallelization
         else:
             with ProcessingPool(processes=self.num_cpu) as pool:
-                pulse_matrices_full = list(
+                self.pulse_matrices_full = list(
                     tqdm(
                         pool.map(
                             lambda i: self.calc_pulse_matrices(
@@ -524,7 +499,8 @@ class Pulse(Hamiltonian):
         t1 = time.time()
         if self.verbose:
             print(f"Time to calculate the pulse matrices: {t1-t0} s.")
-        return pulse_matrices_full
+        
+        return self.pulse_matrices_full
 
     # ---------------------------------------------------
 
@@ -535,7 +511,7 @@ class Pulse(Hamiltonian):
         # loop over timesteps
         new_register_states = []
         for pulse_matrix in pulse_matrices:
-
+            
             new_system_state = pulse_matrix * old_system_states[i] * pulse_matrix.dag()
 
             # reduce from system to register space by tracing out
@@ -619,4 +595,5 @@ class Pulse(Hamiltonian):
 
                 values.append(value)
             values_full.append(values)
+
         return values_full

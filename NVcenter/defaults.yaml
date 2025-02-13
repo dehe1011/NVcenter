@@ -1,23 +1,26 @@
 # Note: unit Hz means frequency, not angular frequency
-
 verbose: True
+full_verbose: False
 
+# Spins keywords
+approx_level: 'no_bath'
+gCCE1_cutoff: 0
+gCCE2_cutoff: 55.e-9 # Dominik
+
+# Hamiltonian keywords
 thermal_bath: True
 suter_method: False
-approx_level: 'no_bath'
-pulse_seq: [0]
-dynamical_decoupling: False
-instant_pulses: False
-env_approx_level: 'no_bath'
-dm_offset: 1.e-5
-num_hahn_echos: 0
 parallelization: False
 
-# NV center Rabi frequency
+# Pulse keywords
+pulse_seq: [0]
+gate_props_list: []
+env_approx_level: 'no_bath'
+dynamical_decoupling: False
+instant_pulses: False
 rabi_frequency: 0.5e+6  # Hz, used by Suter
-
-# P1 center gCCE2 radius
-gCCE2_distance: 55.e-9 # m, used by Dominik
+dm_offset: 1.e-5
+num_hahn_echos: 0
 
 constants:
   # Carcon lattice constant 
@@ -34,12 +37,12 @@ constants:
   # P_gs: -4.96.e+6 # Hz, Suter
 
   # Fermi contact interactions
-  Nzz: -1.76e+6  # Hz
+  N_zz: -1.76e+6  # Hz
   A_N: -2.16e+6 # Hz, Suter
   m_N: -1
 
   # Jahn-Teller effect
-  Jahn_Teller_dict:
+  JT_dict:
     '111': 114.e+6 # Hz
     '-111': 86.e+6 # Hz
     '1-11': 86.e+6 # Hz

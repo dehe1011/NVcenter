@@ -2,8 +2,9 @@ import numpy as np
 import qutip as q
 
 from . import CONST
-from .helpers import adjust_space_dim, get_dipolar_matrix
+from .utils import get_dipolar_matrix
 from .spins import Spins
+from .hamiltonian import adjust_space_dim
 
 
 def H_Suter():
@@ -43,8 +44,7 @@ def calc_hadamard_pulse_seq(C13_pos, suter_method=False):
     """
 
     register_config = [("NV", (0, 0, 0), 0, {}), ("C13", C13_pos, 0, {})]
-    approx_level = "no_bath"
-    spins = Spins(register_config, [], approx_level)
+    spins = Spins(register_config)
 
     spin1, spin2 = spins.register_spins
     dipolar_matrix = get_dipolar_matrix(

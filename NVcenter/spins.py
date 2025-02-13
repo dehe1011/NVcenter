@@ -16,10 +16,6 @@ class Spins:
     ----------
     register_config : list of tuples
         Configuration of the register spins. Each tuple contains (spin_type, position, initial_spin).
-    bath_config : list of tuples
-        Configuration of the bath spins. Each tuple contains (spin_type, position, initial_spin).
-    approx_level : str
-        Approximation level for the system. Can be 'no_bath', 'full_bath', 'gCCE0', 'gCCE1', or 'gCCE2'.
 
     Important Attributes
     --------------------
@@ -29,18 +25,21 @@ class Spins:
         List of mean-field spins for different approximation levels.
     """
 
-    def __init__(self, register_config, bath_config, approx_level):
-        self.approx_level = approx_level
+    def __init__(self, register_config, **kwargs):
+
+        # keyword arguments
+        self.kwargs = kwargs
+        self.approx_level = kwargs.get("approx_level", DEFAULTS["approx_level"])
+        self.gCCE1_cutoff = kwargs.get("gCCE1_cutoff", DEFAULTS["gCCE1_cutoff"])
+        self.gCCE2_cutoff = kwargs.get("gCCE2_cutoff", DEFAULTS["gCCE2_cutoff"])
 
         # register porperties
         self.register_config = register_config
         self.register_num_spins = len(self.register_config)
-        self.register_spin_types, self.register_spin_pos, self.register_init_spin, _ = (
-            list(zip(*self.register_config))
-        )
+        self.register_spin_types, self.register_spin_pos, self.register_init_spin, _ = list(zip(*self.register_config))
 
         # bath properties
-        self.bath_config = bath_config
+        self.bath_config = kwargs.get("bath_config", [])
         self.bath_num_spins = len(self.bath_config)
         if self.bath_num_spins > 0:
             self.bath_spin_types, self.bath_spin_pos, self.bath_init_spin, _ = list(
@@ -50,15 +49,15 @@ class Spins:
         # list of instances of Spin class (for each spin in the register and bath)
         self.register_spins = [
             Spin(*spin_config) for spin_config in self.register_config
-        ]
+            ]
         if self.bath_num_spins > 0:
-            self.bath_spins = [Spin(*spin_config) for spin_config in self.bath_config]
+            self.bath_spins = [
+                Spin(*spin_config) for spin_config in self.bath_config
+                ]
 
         # indices of bath spins that are simulated exactly in the corresponding gCCE approximation
-        # we exclude P1 centers too far apart to interact significantly
         if self.bath_num_spins > 0:
-            self.idx_gCCE1 = list(range(self.bath_num_spins))
-            self.gCCE2_distance = DEFAULTS["gCCE2_distance"]
+            self.idx_gCCE1 = self.get_idx_gCCE1()
             self.idx_gCCE2 = self.get_idx_gCCE2()
 
         # lists of lists of instances of Spin class (for each spin in each system and mean-field configuration)
@@ -69,10 +68,17 @@ class Spins:
 
     # -------------------------------------------------
 
+    def get_idx_gCCE1(self):
+        """ Returns indices of bath spins with a separation smaller than gCCE1_distance.
+        For larger distances the interaction can be neglected. """
+        
+        idx_gCCE1 = list(range(self.bath_num_spins))
+        return idx_gCCE1
+
+
     def get_idx_gCCE2(self):
-        """Returns indices of interacting P1 centers in the bath with a distance less than 55nm
-        since for larger distances the interaction can be neglected and does not give a contribution
-        to the gCCE2 approximation."""
+        """ Returns indices of two bath spins with a separation smaller than gCCE2_distance.
+        For larger distances the interaction can be neglected. """
 
         idx_gCCE2 = list(combinations(range(self.bath_num_spins), 2))
         if "P1" not in self.bath_spin_types:
@@ -86,9 +92,11 @@ class Spins:
             distance_P1 = np.linalg.norm(
                 np.array(self.bath_spin_pos[i]) - np.array(self.bath_spin_pos[j])
             )
-            if distance_NV < self.gCCE2_distance and distance_P1 < self.gCCE2_distance:
+            if distance_NV < self.gCCE2_cutoff and distance_P1 < self.gCCE2_cutoff:
                 idx_gCCE2.append((i, j))
         return idx_gCCE2
+    
+    # -------------------------------------------------
 
     def get_config_lists(self):
         """Returns the system and mean-field configurations."""
@@ -167,3 +175,5 @@ class Spins:
                 )
 
         return system_spins_list, mf_spins_list
+
+# -------------------------------------------------
