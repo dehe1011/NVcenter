@@ -13,15 +13,17 @@ classifiers = [
 authors = [
     { name = "Dennis Herb", email = "dennis.herb@uni-ulm.de" },
 ]
-dynamic = ["version"]
+dynamic = ["version", "dependencies", "optional-dependencies"]
 
-dependencies = [
-    "qutip",
-    "matplotlib",
-    "qiskit",
-    "pathos",
-    "tqdm",
-]
+[tool.setuptools]
+packages = ["NVcenter"]
+
+[tool.setuptools.dynamic]
+version = {attr = "NVcenter.__version__"}
+dependencies = {file = "requirements/requirements.txt"}
+
+[tool.setuptools.dynamic.optional-dependencies]
+dev = { file = "requirements/dev-requirements.txt" }
 
 [project.urls]
 repository = "https://github.com/dehe1011/NVcenter"

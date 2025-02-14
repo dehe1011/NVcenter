@@ -72,16 +72,24 @@ class Spins:
         """Returns indices of bath spins with a separation smaller than gCCE1_distance.
         For larger distances the interaction can be neglected."""
 
-        idx_gCCE1 = list(range(self.bath_num_spins))
+        # Include all bath spins in the gCCE1 approximation
+        # idx_gCCE1 = list(range(self.bath_num_spins))
+
+        idx_gCCE1 = []
+        for i in range(self.bath_num_spins):
+            distance_NV = np.linalg.norm(
+                np.array(self.bath_spin_pos[i]) - np.array(self.register_spin_pos[0])
+            )
+            if distance_NV < self.gCCE1_cutoff:
+                idx_gCCE1.append(i)
         return idx_gCCE1
 
     def get_idx_gCCE2(self):
         """Returns indices of two bath spins with a separation smaller than gCCE2_distance.
         For larger distances the interaction can be neglected."""
 
-        idx_gCCE2 = list(combinations(range(self.bath_num_spins), 2))
-        if "P1" not in self.bath_spin_types:
-            return idx_gCCE2
+        # Include all pairs of bath spins in the gCCE2 approximation
+        # idx_gCCE2 = list(combinations(range(self.bath_num_spins), 2))
 
         idx_gCCE2 = []
         for i, j in combinations(range(self.bath_num_spins), 2):
@@ -93,12 +101,13 @@ class Spins:
             )
             if distance_NV < self.gCCE2_cutoff and distance_P1 < self.gCCE2_cutoff:
                 idx_gCCE2.append((i, j))
+
         return idx_gCCE2
 
     # -------------------------------------------------
 
     def get_config_lists(self):
-        """Returns the system and mean-field configurations."""
+        """Returns the system and mean-field configurations for different approximation levels."""
 
         system_config_list, mf_config_list = {}, {}
 
@@ -138,6 +147,8 @@ class Spins:
                 )
 
         return system_config_list, mf_config_list
+
+    # -------------------------------------------------
 
     def get_spins_lists(self):
         """Returns the system and mean-field spins needed to set up the Hamiltonian for different approximation levels."""

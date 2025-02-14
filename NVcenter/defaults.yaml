@@ -4,7 +4,7 @@ full_verbose: False
 
 # Spins keywords
 approx_level: 'no_bath'
-gCCE1_cutoff: 0
+gCCE1_cutoff: 100.e-9
 gCCE2_cutoff: 55.e-9 # Dominik
 
 # Hamiltonian keywords
@@ -17,9 +17,11 @@ pulse_seq: [0]
 gate_props_list: []
 env_approx_level: 'no_bath'
 dynamical_decoupling: False
+dyn_dec: False
 instant_pulses: False
 rabi_frequency: 0.5e+6  # Hz, used by Suter
 dm_offset: 1.e-5
+fidelity_offset: 1.e-5
 num_hahn_echos: 0
 
 constants:

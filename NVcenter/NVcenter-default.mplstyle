@@ -1,11 +1,11 @@
 # NVcenter Custom Matplotlib Stylefile
 # ------------------------------------
 
-# Improting qDNA saves this Matplotlib style file in the directory specified by
+# Improting NVcenter saves this Matplotlib style file in the directory specified by
 # `import matplotlib as mpl; mpl.get_configdir()`
 # >>> 'C:\\Users\\<username>\\.matplotlib'
 # Once saved, it becomes globally accessible and can be applied using
-# `import matplotlib.pyplot as plt; plt.style.use('qDNA-default')`.
+# `import matplotlib.pyplot as plt; plt.style.use('NVcenter-default')`.
 
 
 # LaTeX rendering

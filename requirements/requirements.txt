@@ -1,12 +1,7 @@
 qutip
 qiskit
 matplotlib
-pathos
 tqdm
-pennylane 
 gymnasium
 stable-baselines3
 tensorboard
-
-notebook
-ipykernel

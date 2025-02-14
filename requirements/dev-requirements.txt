@@ -2,3 +2,5 @@ black
 pytest
 pylint
 pre-commit
+notebook
+ipykernel

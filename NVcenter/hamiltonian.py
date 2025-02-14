@@ -1,6 +1,5 @@
 import time
 from multiprocessing import cpu_count
-from pathos.multiprocessing import ProcessingPool  # pylint: disable=import-error
 from tqdm import tqdm
 import qutip as q
 
@@ -52,6 +51,7 @@ class Hamiltonian(Spins):
 
     def __init__(self, register_config, **kwargs):
         super().__init__(register_config, **kwargs)
+        self.t0 = time.time()  # print("Time elapsed:", time.time() - self.t0)
 
         # keyword arguments
         self.thermal_bath = kwargs.get("thermal_bath", DEFAULTS["thermal_bath"])
@@ -66,11 +66,13 @@ class Hamiltonian(Spins):
         self.register_spin_ops = self.calc_spin_ops(self.register_spins)
         self.system_spin_ops = self.calc_spin_ops(self.system_spins_list[0])
 
-        # identity operators for register and system
+        # identity operators and dimensions for register and system
         self.register_identity = q.tensor(
             [q.qeye(2) for _ in range(self.register_num_spins)]
         )
+        self.register_dims = self.register_identity.dims
         self.system_identity = self.system_spin_ops[0][0]
+        self.system_dims = self.system_identity.dims
 
         # initial states for register and systems
         self.register_init_state = self.calc_register_init_state()
@@ -97,17 +99,24 @@ class Hamiltonian(Spins):
 
     def calc_register_init_state(self):
         """Calculated the initial state of the register."""
+
         return q.tensor(
             [register_spin.init_state for register_spin in self.register_spins]
         )
 
     def calc_bath_init_state(self):
         """Calculates the totally mixed thermal state of the bath."""
+
         if self.thermal_bath:
             bath_identity = q.tensor([q.qeye(2) for _ in range(self.bath_num_spins)])
-            return 1 / (2**self.bath_num_spins) * bath_identity
+            bath_init_state = 1 / (2**self.bath_num_spins) * bath_identity
 
-        return q.tensor([bath_spin.init_state for bath_spin in self.bath_spins])
+        else:
+            bath_init_state = q.tensor(
+                [bath_spin.init_state for bath_spin in self.bath_spins]
+            )
+
+        return bath_init_state
 
     def calc_system_init_states(self, register_state):
         """Returns the system states for a given register state."""
@@ -191,8 +200,6 @@ class Hamiltonian(Spins):
         if self.matrices:
             return self.matrices
 
-        t0 = time.time()
-
         # progress bar properties
         disable_tqdm = not self.full_verbose
         message = f"Calculating Hamiltonians for {self.approx_level}"
@@ -201,9 +208,6 @@ class Hamiltonian(Spins):
         for i in tqdm(range(self.num_systems), desc=message, disable=disable_tqdm):
             matrices.append(self.calc_matrix(i))
 
-        t1 = time.time()
-        if self.full_verbose:
-            print(f"Time to calculate the Hamiltonians: {t1-t0} s.")
         self.matrices = matrices
         return self.matrices
 

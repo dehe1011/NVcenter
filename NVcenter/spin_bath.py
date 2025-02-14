@@ -18,6 +18,7 @@ def get_spin_bath_density(
     pos_seed=123,
     init_state_seed=123,
     lamor_seed=123,
+    **kwargs,
 ):
     """Returns a random spin bath configuration."""
 
@@ -26,16 +27,26 @@ def get_spin_bath_density(
     spin_types = [spin_type] * num_spins
     init_states = choose_init_states(init_state_seed, num_spins)
 
-    kwargs = [{}] * num_spins
+    # Keyword arguments
+    kwargs_list = [kwargs] * num_spins
     if spin_type == "P1":
-        kwargs = choose_lamor_disorders(lamor_seed, num_spins)
+        kwargs_P1_list = choose_lamor_disorders(lamor_seed, num_spins)
+        for kwargs, kwargs_P1 in zip(kwargs_list, kwargs_P1_list):
+            kwargs.update(kwargs_P1)
 
-    config = list(zip(spin_types, spin_pos, init_states, kwargs))
+    config = list(zip(spin_types, spin_pos, init_states, kwargs_list))
     return config
 
 
 def get_spin_bath_abundancy(
-    spin_type, abundancy, rmin, rmax, pos_seed=123, init_state_seed=123, lamor_seed=123
+    spin_type,
+    abundancy,
+    rmin,
+    rmax,
+    pos_seed=123,
+    init_state_seed=123,
+    lamor_seed=123,
+    **kwargs,
 ):
     """Returns a random spin bath configuration."""
 
@@ -44,11 +55,14 @@ def get_spin_bath_abundancy(
     spin_types = [spin_type] * num_spins
     init_states = choose_init_states(init_state_seed, num_spins)
 
-    kwargs = [{}] * num_spins
+    # Keyword arguments
+    kwargs_list = [kwargs] * num_spins
     if spin_type == "P1":
-        kwargs = choose_lamor_disorders(lamor_seed, num_spins)
+        kwargs_P1_list = choose_lamor_disorders(lamor_seed, num_spins)
+        for kwargs, kwargs_P1 in zip(kwargs_list, kwargs_P1_list):
+            kwargs.update(kwargs_P1)
 
-    config = list(zip(spin_types, spin_pos, init_states, kwargs))
+    config = list(zip(spin_types, spin_pos, init_states, kwargs_list))
     return config
 
 
@@ -56,10 +70,11 @@ def get_spin_bath_abundancy(
 
 
 def calc_spin_baths_density(
-    spin_type, density, shape, rmin, rmax, num_baths, num_init_states
+    spin_type, density, shape, rmin, rmax, num_baths, num_init_states, **kwargs
 ):
     """Creates bath configurations."""
 
+    # Initialize the list of bath configurations
     spin_configs = [[None] * num_init_states for _ in range(num_baths)]
 
     for bath_idx in range(num_baths):
@@ -72,6 +87,7 @@ def calc_spin_baths_density(
                 rmax,
                 pos_seed=bath_idx,
                 init_state_seed=init_state_idx,
+                **kwargs,
             )
             spin_configs[bath_idx][init_state_idx] = spin_bath
 
@@ -88,10 +104,11 @@ def calc_spin_baths_density(
 
 
 def calc_spin_baths_abundancy(
-    spin_type, abundancy, rmin, rmax, num_baths, num_init_states
+    spin_type, abundancy, rmin, rmax, num_baths, num_init_states, **kwargs
 ):
     """Creates bath configurations."""
 
+    # Initialize the list of bath configurations
     spin_configs = [[None] * num_init_states for _ in range(num_baths)]
 
     for bath_idx in range(num_baths):
@@ -103,6 +120,7 @@ def calc_spin_baths_abundancy(
                 rmax,
                 pos_seed=bath_idx,
                 init_state_seed=init_state_idx,
+                **kwargs,
             )
             spin_configs[bath_idx][init_state_idx] = spin_bath
 
@@ -223,7 +241,7 @@ def save_spin_baths(spin_configs, metadata, directory, filename):
     os.makedirs(directory, exist_ok=True)
     filepath = os.path.join(directory, filename + ".json")
     with open(filepath, "w", encoding="utf-8") as file:
-        json.dump(spin_configs, file, indent=4)
+        json.dump(spin_configs, file, indent=3)
 
 
 def load_spin_baths(filename, directory, load_metadata=False):

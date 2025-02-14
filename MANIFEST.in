@@ -7,6 +7,6 @@ include requirements/*.txt
 # Include the MANIFEST file itself
 include MANIFEST.in
 
-# Include all .py and .json files
-recursive-include src *.py
-recursive-include src *.json
+# Include all .npy and .json files
+# recursive-include export *.npy
+recursive-include baths *.json
