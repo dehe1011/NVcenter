@@ -100,10 +100,10 @@ class Environment2(Evolution, gym.Env):
 
         # choose a random bath configuration
         i = random.randint(0, self.num_bath_configs - 1)
-        self.bath_config = self.bath_configs[i]
+        bath_configs = [self.bath_configs[i]]
 
-        self.current_state = self.calc_states()[0, 0]
-        # self.fidelity = self.calc_values('fidelity')[0,0]
+        self.current_state = self.calc_states(bath_configs)[0, 0]
+        # self.fidelity = self.calc_values('fidelity', bath_configs)[0,0]
         self.current_state = q.Qobj(self.current_state, dims=self.target.dims)
         self.fidelity = calc_fidelity(self.current_state, self.target)
 
@@ -165,10 +165,10 @@ class Environment2(Evolution, gym.Env):
                 self._check_fidelity(values.flatten())
             return values
 
-    def _get_full_bath(self, i, quantity, t_list, old_register_states):
+    def _get_full_bath(self, bath_config, quantity, t_list, old_register_states):
         """Function to compute the bath quantities with a full bath."""
 
-        self.bath_config = self.bath_configs[i]
+        self.bath_config = bath_config
         self.approx_level = "full_bath"
 
         if quantity == "states":
@@ -218,10 +218,10 @@ class Environment2(Evolution, gym.Env):
                 print("Fidelity not between 0 and 1.", fidelity)
         print("Fidelity check done.")
 
-    def _get_gCCE_states(self, i, t_list, old_register_states):
+    def _get_gCCE_states(self, bath_config, t_list, old_register_states):
         """Function to compute the bath quantities with different gCCE orders."""
 
-        self.bath_config = self.bath_configs[i]
+        self.bath_config = bath_config
 
         # Initialize the gCCE states
         num_old_register_states = len(old_register_states)
@@ -299,9 +299,9 @@ class Environment2(Evolution, gym.Env):
 
     # -------------------------------------------------
 
-    def get_gCCE_values(self, i, observable, t_list, old_register_states):
+    def get_gCCE_values(self, bath_config, observable, t_list, old_register_states):
 
-        self.bath_config = self.bath_configs[i]
+        self.bath_config = bath_config
 
         # Initialize the gCCE values
         num_old_register_states = len(old_register_states)
@@ -364,28 +364,30 @@ class Environment2(Evolution, gym.Env):
 
     # -------------------------------------------------
 
-    def _calc_quantity(self, i, quantity, t_list, old_register_states):
+    def _calc_quantity(self, bath_config, quantity, t_list, old_register_states):
         """Function to compute bath quantities in parallel."""
 
         if self.env_approx_level == "full_bath":
-            return self._get_full_bath(i, quantity, t_list, old_register_states)
+            return self._get_full_bath(bath_config, quantity, t_list, old_register_states)
 
         if self.env_approx_level in ["gCCE0", "gCCE1", "gCCE2"]:
             if quantity == "states":
-                return self._get_gCCE_states(i, t_list, old_register_states)
+                return self._get_gCCE_states(bath_config, t_list, old_register_states)
             else:
                 observable = quantity
-                return self.get_gCCE_values(i, observable, t_list, old_register_states)
+                return self.get_gCCE_values(bath_config, observable, t_list, old_register_states)
 
         return 0  # Default return if no computation was done
 
     def _calc_quantity_wrapper(self, args):
         """Wrapper function for multiprocessing"""
-        i, quantity, t_list, old_register_states = args
-        return self._calc_quantity(i, quantity, t_list, old_register_states)
+        bath_config, quantity, t_list, old_register_states = args
+        return self._calc_quantity(bath_config, quantity, t_list, old_register_states)
 
-    def calc_quantites(self, quantity, t_list, old_register_states):
-
+    def calc_quantites(self, quantity, bath_configs, t_list, old_register_states):
+        
+        if bath_configs is None:
+            bath_configs = self.bath_configs
         if t_list is None:
             t_list = self.t_list
         if old_register_states is None:
@@ -403,17 +405,17 @@ class Environment2(Evolution, gym.Env):
 
         if not self.parallelization:
             for i in tqdm(
-                range(self.num_bath_configs), desc=message, disable=disable_tqdm
+                range(len(bath_configs)), desc=message, disable=disable_tqdm
             ):
                 quantites_baths += self._calc_quantity(
-                    i, quantity, t_list, old_register_states
+                    bath_configs[i], quantity, t_list, old_register_states
                 )
 
         else:
             with multiprocessing.Pool(processes=multiprocessing.cpu_count()) as pool:
                 args = [
-                    (i, quantity, t_list, old_register_states)
-                    for i in range(self.num_bath_configs)
+                    (bath_configs[i], quantity, t_list, old_register_states)
+                    for i in range(len(bath_configs))
                 ]
                 results = list(
                     tqdm(
@@ -427,11 +429,11 @@ class Environment2(Evolution, gym.Env):
 
         return 1 / self.num_bath_configs * quantites_baths
 
-    def calc_states(self, t_list=None, old_register_states=None):
-        return self.calc_quantites("states", t_list, old_register_states)
+    def calc_states(self, bath_configs=None, t_list=None, old_register_states=None):
+        return self.calc_quantites("states", bath_configs, t_list, old_register_states)
 
-    def calc_values(self, observable, t_list=None, old_register_states=None):
-        return self.calc_quantites(observable, t_list, old_register_states)
+    def calc_values(self, observable,  bath_configs=None, t_list=None, old_register_states=None):
+        return self.calc_quantites(observable, bath_configs, t_list, old_register_states)
 
 
 # -------------------------------------------------
