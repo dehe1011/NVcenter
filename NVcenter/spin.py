@@ -1,5 +1,6 @@
 import numpy as np
 import qutip as q
+from qutip import gates
 
 from . import CONST
 
@@ -44,6 +45,29 @@ def get_spin_matrices(spin, trunc=False):
 
     return spin_matrices
 
+def rotate_spin_op(spin_op, theta, phi):
+    """ Returns the rotated spin operator. 
+    Example: q.sigmax() == rotate_spin_op(q.sigmaz(), np.pi/2, 0). 
+    """
+
+    R = gates.rz(phi) * gates.ry(theta)
+    return R * spin_op * R.dag()
+
+def rotate_spin_matrices(crystal_direction):
+    """ Returns the spin matrices rotated to the given crystal direction. """
+
+    tetrahedral_angle = np.arccos(-1/3) # 109.47°
+
+    crystal_direction_to_angles = {
+    "[111]": (0, 0),  # North pole
+    "[1-1-1]": (tetrahedral_angle, 0),  # 109.47°, 0
+    "[-11-1]": (tetrahedral_angle, 2*np.pi/3),  # 109.47°, 2π/3
+    "[-1-11]": (tetrahedral_angle, 4*np.pi/3),  # 109.47°, 4π/3
+    }
+
+    spin_matrices = get_spin_matrices(spin=1/2)
+    theta, phi = crystal_direction_to_angles[crystal_direction]
+    return [rotate_spin_op(spin_op, theta, phi) for spin_op in spin_matrices]
 
 # -------------------------------------------
 
@@ -68,6 +92,7 @@ class Spin:
 
         # Magnetic field in [111] direction of the NV center
         self.Bz = self.kwargs.get("Bz", CONST["Bz"])
+        self.can_flip = self.kwargs.get("can_flip", True)
 
         # --------------------------------------------
 
@@ -84,36 +109,38 @@ class Spin:
             # Frozen spin state of the nitrogen spin
             self.m_N = self.kwargs.get("m_N", CONST["m_N"])
 
-            # Spin operators truncated to m_s = 0 and m_s = -1
-            self.spin_dim = 2
-            self.S = get_spin_matrices(spin=1, trunc=True)
+            # Truncated NV center (reduced to a TLS)
+            self.truncated = self.kwargs.get("truncated", True)
+
+            if self.truncated:
+                self.spin_dim = 2
+                self.mz_list = [0, -1]
+                self.mz = self.mz_list[self.init_spin]
+                
+            else:
+                self.spin_dim = 3
+                self.mz_list = [1, 0, -1]
+                self.mz = self.mz_list[self.init_spin]
+
+            # Spin operators
+            self.S = get_spin_matrices(spin=1, trunc=self.truncated)
 
             # Hamiltonian
             self.lamor = self.gamma * self.Bz / (2 * np.pi)  # -414.8 MHz
             self.renormalization = self.m_N * self.N_zz  # 1.76 MHz
             # self.renormalization = self.m_N * self.A_N # 2.16 MHz
 
-            self.H = (
-                self.D_gs * self.S[3] ** 2
-                - self.lamor * self.S[3]
-                + self.renormalization * self.S[3]
-            )
+            self.rotating_frame = self.kwargs.get("rotating_frame", False)
+            if self.rotating_frame:
+                self.can_flip = False
+                self.H = q.Qobj([[0]*self.spin_dim, [0]*self.spin_dim])
 
-        # --------------------------------------------
-
-        # TLS NV center electron spin in the rotating frame
-        if self.spin_type == "NV0":
-
-            # gyromagnetic ratio
-            # needed for dipolar coupling to neighboring spins
-            self.gamma = self.kwargs.get("gamma", CONST["gamma_e"])
-
-            # Spin operators truncated to m_s = 0 and m_s = -1
-            self.spin_dim = 2
-            self.S = get_spin_matrices(spin=1, trunc=True)
-
-            # Hamiltonian
-            self.H = q.Qobj([[0, 0], [0, 0]])
+            else:
+                self.H = (
+                    self.D_gs * self.S[3] ** 2
+                    - self.lamor * self.S[3]
+                    + self.renormalization * self.S[3]
+                )
 
         # --------------------------------------------
 
@@ -125,6 +152,8 @@ class Spin:
 
             # Spin operators
             self.spin_dim = 2
+            self.mz_list = [1/2, -1/2]
+            self.mz = self.mz_list[self.init_spin]
             self.S = get_spin_matrices(spin=1 / 2)
 
             # Hamiltonian
@@ -141,6 +170,8 @@ class Spin:
 
             # Spin operators
             self.spin_dim = 2
+            self.mz_list = [1 / 2, -1 / 2]
+            self.mz = self.mz_list[self.init_spin]
             self.S = get_spin_matrices(spin=1 / 2)
 
             # Hamiltonian
@@ -165,42 +196,14 @@ class Spin:
 
             # Spin matrices
             self.spin_dim = 2
+            self.mz_list = [1 / 2, -1 / 2]
+            self.mz = self.mz_list[self.init_spin]
             self.S = get_spin_matrices(spin=1 / 2)
 
             # Hamiltonian
             self.lamor = self.gamma * self.Bz / (2 * np.pi)  # -414.8 MHz
             self.lamor_disorder = self.nitrogen_spin * self.JT_dict[self.axis]
             self.H = -self.lamor * self.S[3] + self.lamor_disorder * self.S[3]
-
-        # --------------------------------------------
-
-        # Full NV center electron spin (without reduction to a TLS)
-        if self.spin_type == "NV_full":
-
-            # Zero-field splitting
-            self.D_gs = self.kwargs.get("D_gs", CONST["D_gs"])
-            # gyromagnetic ratio
-            self.gamma = self.kwargs.get("gamma", CONST["gamma_e"])
-            # Nitrogen contribution
-            self.N_zz = self.kwargs.get("N_zz", CONST["N_zz"])  # Dominik
-            self.A_N = self.kwargs.get("A_N", CONST["A_N"])  # Suter
-            # Frozen spin state of the nitrogen spin
-            self.m_N = self.kwargs.get("m_N", CONST["m_N"])
-
-            # Spin operators
-            self.spin_dim = 3
-            self.S = get_spin_matrices(spin=1, trunc=False)
-
-            # Hamiltonian
-            self.lamor = self.gamma * self.Bz / (2 * np.pi)  # -414.8 MHz
-            self.renormalization = self.m_N * self.N_zz  # 1.76 MHz
-            # self.renormalization = self.m_N * self.A_N # 2.16 MHz
-
-            self.H = (
-                self.D_gs * self.S[3] ** 2
-                - self.lamor * self.S[3]
-                + self.renormalization * self.S[3]
-            )
 
         # --------------------------------------------
 
@@ -214,6 +217,8 @@ class Spin:
 
             # Spin matrices
             self.spin_dim = 3
+            self.mz_list = [1, 0, -1]
+            self.mz = self.mz_list[self.init_spin]
             self.S = get_spin_matrices(spin=1)
 
             # Hamiltonian

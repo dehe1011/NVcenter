@@ -1,235 +1,232 @@
-import random
 import os
+from itertools import product
 import json
 import numpy as np
+import matplotlib.pyplot as plt
 
 from . import CONST
 from .utils import spherical_to_cartesian, cylindrical_to_cartesian
 
 # ------------------------------------------------------------
 
+class SpinBath:
+    def __init__(self, spin_type, **kwargs):
+        self.spin_type = spin_type
+        self.kwargs = kwargs
+        self.bath_kwargs = kwargs.get("bath_kwargs", {})
 
-def get_spin_bath_density(
-    spin_type,
-    density,
-    shape,
-    rmin,
-    rmax,
-    pos_seed=123,
-    init_state_seed=123,
-    lamor_seed=123,
-    **kwargs,
-):
-    """Returns a random spin bath configuration."""
+        # calculate the shape and dimensions of the spin bath
+        self.shape = self.kwargs.get("shape", "sphere")
+        self.rmin = self.kwargs.get("rmin", 0)
+        self.rmax = self.kwargs.get("rmax", 10e-9)
 
-    num_spins = calc_num_spins_density(density, shape, rmin, rmax)
-    spin_pos = choose_spin_pos(pos_seed, num_spins, shape, rmin, rmax)
-    spin_types = [spin_type] * num_spins
-    init_states = choose_init_states(init_state_seed, num_spins)
+        # calculate the density of the spin bath
+        self.density = self.kwargs.get("density")
+        self.abundancy = self.kwargs.get("abundancy")
+        self.density_C = CONST["N_unit"]  / CONST["a_C"] ** 3
+        if not self.density:
+            assert self.abundancy, "Either density or abundancy should be provided."
+            self.shape = "sphere" # abundancy only defined for a sphere
+            self.density = self.abundancy * self.density_C
 
-    # Keyword arguments
-    kwargs_list = [kwargs] * num_spins
-    if spin_type == "P1":
-        kwargs_P1_list = choose_lamor_disorders(lamor_seed, num_spins)
-        for kwargs, kwargs_P1 in zip(kwargs_list, kwargs_P1_list):
-            kwargs.update(kwargs_P1)
+        self.depth = self.kwargs.get("depth", 10e-9)
+        self.sample = self.kwargs.get("sample", False)
+        self.num_spins = self.kwargs.get("num_spins", 0)
 
-    config = list(zip(spin_types, spin_pos, init_states, kwargs_list))
-    return config
+        self.seed_num_spins = self.kwargs.get("seed_num_spins", 123)
+        self.seed_spin_pos = self.kwargs.get("seed_spin_pos", 123)
+        self.seed_init_states = self.kwargs.get("seed_init_states", 123)
+        self.seed_lamor_disorders = self.kwargs.get("seed_lamor_disorders", 123)
 
+    # -------------------------------------------------
+        
+    def calc_num_spins(self):
+        """Calculates the number of bath spins in a circle or sphere from a given density.
+        Important: the unit should be nm! """
 
-def get_spin_bath_abundancy(
-    spin_type,
-    abundancy,
-    rmin,
-    rmax,
-    pos_seed=123,
-    init_state_seed=123,
-    lamor_seed=123,
-    **kwargs,
-):
-    """Returns a random spin bath configuration."""
+        # set the seed for reproducibility
+        np.random.seed(self.seed_num_spins)
 
-    num_spins = calc_num_spins_abundancy(abundancy, rmin, rmax)
-    spin_pos = choose_spin_pos(pos_seed, num_spins, "sphere", rmin, rmax)
-    spin_types = [spin_type] * num_spins
-    init_states = choose_init_states(init_state_seed, num_spins)
+        num_spins = 0
+        if self.shape == "sphere":
+            volume = 4 / 3 * np.pi * (self.rmax**3 - self.rmin**3)
+            if self.sample: 
+                n, p = volume * 1e+27, self.density / 1e+27
+                num_spins = np.random.binomial(n, p)
+            else: 
+                # expectation value of the binomial distribution (n*p)
+                num_spins = int(volume * self.density) 
 
-    # Keyword arguments
-    kwargs_list = [kwargs] * num_spins
-    if spin_type == "P1":
-        kwargs_P1_list = choose_lamor_disorders(lamor_seed, num_spins)
-        for kwargs, kwargs_P1 in zip(kwargs_list, kwargs_P1_list):
-            kwargs.update(kwargs_P1)
+        elif self.shape == "circle":
+            area = np.pi * (self.rmax**2 - self.rmin**2)
+            if self.sample:
+                n, p = area *1e+18, self.density / 1e+18
+                num_spins = np.random.binomial(n, p)
+            else: 
+                # expectation value of the binomial distribution (n*p)
+                num_spins = int(area * self.density) 
 
-    config = list(zip(spin_types, spin_pos, init_states, kwargs_list))
-    return config
+        return num_spins
+    
+    # -------------------------------------------------
 
+    def choose_spin_pos(self):
+        """Returns random positions of bath spins in cartesian coordinates within a sphere or circle."""
 
-# ------------------------------------------------------------
+        # set the seed for reproducibility
+        np.random.seed(self.seed_spin_pos)
 
+        if self.shape == "sphere":
+            return self.choose_spin_pos_sphere()
+        elif self.shape == "circle":
+            return self.choose_spin_pos_circle()
 
-def calc_spin_baths_density(
-    spin_type, density, shape, rmin, rmax, num_baths, num_init_states, **kwargs
-):
-    """Creates bath configurations."""
+    def choose_spin_pos_sphere(self):
+        """Returns random positions of bath spins in cartesian coordinates within a sphere."""
 
-    # Initialize the list of bath configurations
-    spin_configs = [[None] * num_init_states for _ in range(num_baths)]
+        r_list = [np.cbrt(np.random.uniform(self.rmin**3, self.rmax**3)) for _ in range(self.num_spins)]
+        phi_list = [float(np.random.uniform(0, 2 * np.pi)) for _ in range(self.num_spins)]
+        theta_list = [float(np.random.uniform(0, np.pi)) for _ in range(self.num_spins)]
 
-    for bath_idx in range(num_baths):
-        for init_state_idx in range(num_init_states):
-            spin_bath = get_spin_bath_density(
-                spin_type,
-                density,
-                shape,
-                rmin,
-                rmax,
-                pos_seed=bath_idx,
-                init_state_seed=init_state_idx,
-                **kwargs,
-            )
-            spin_configs[bath_idx][init_state_idx] = spin_bath
+        spin_pos = []
+        for r, phi, theta in zip(r_list, phi_list, theta_list):
+            spin_pos.append(spherical_to_cartesian(r, phi, theta))
+        return spin_pos
 
-    metadata = {
-        "density": density,
-        "shape": shape,
-        "rmin": rmin,
-        "rmax": rmax,
-        "num_baths": num_baths,
-        "num_init_state": num_init_states,
-    }
+    def choose_spin_pos_circle(self):
+        """Returns random positions of bath spins in cartesian coordinates within a circle."""
 
-    return spin_configs, metadata
+        r_list = [np.sqrt(np.random.uniform(self.rmin**2, self.rmax**2)) for _ in range(self.num_spins)]
+        phi_list = [float(np.random.uniform(0, 2 * np.pi)) for _ in range(self.num_spins)]
+        z_list = [self.depth] * self.num_spins
 
+        spin_pos = []
+        for r, phi, z in zip(r_list, phi_list, z_list):
+            spin_pos.append(cylindrical_to_cartesian(r, phi, z))
+        return spin_pos
+    
+    # -------------------------------------------------
 
-def calc_spin_baths_abundancy(
-    spin_type, abundancy, rmin, rmax, num_baths, num_init_states, **kwargs
-):
-    """Creates bath configurations."""
+    def choose_init_states(self):
+        """Returns the initial states of bath spins."""
 
-    # Initialize the list of bath configurations
-    spin_configs = [[None] * num_init_states for _ in range(num_baths)]
+        # set the seed for reproducibility
+        np.random.seed(self.seed_init_states)
+        return np.random.choice([0, 1], size=self.num_spins).tolist()
+    
+    # -------------------------------------------------
 
-    for bath_idx in range(num_baths):
-        for init_state_idx in range(num_init_states):
-            spin_bath = get_spin_bath_abundancy(
-                spin_type,
-                abundancy,
-                rmin,
-                rmax,
-                pos_seed=bath_idx,
-                init_state_seed=init_state_idx,
-                **kwargs,
-            )
-            spin_configs[bath_idx][init_state_idx] = spin_bath
+    def choose_lamor_disorders(self):
+        """Returns the disorder in the Lamor frequencies of P1 centers due to the hyperfine coupling between nitrogen nuclear spin and the electron
+        (that couples to the NV center). This effect depends on the nitrogen spin and P1 center delocalization axis (due to the Jahn-Teller effect).
+        """
 
-    metadata = {
-        "abundancy": abundancy,
-        "rmin": rmin,
-        "rmax": rmax,
-        "num_baths": num_baths,
-        "num_init_state": num_init_states,
-    }
+        np.random.seed(self.seed_lamor_disorders)
+        axes = ["111", "-111", "1-11", "11-1"]
+        nitrogen_spins = [-1, 0, 1]
+        axis_choice = np.random.choice(axes, size=self.num_spins)
+        nitrogen_spin_choice = np.random.choice(nitrogen_spins, size=self.num_spins)
+        return [
+            {"nitrogen_spin": nitrogen_spin_choice[i], "axis": axis_choice[i]}
+            for i in range(self.num_spins)
+        ]
+        
+    # -------------------------------------------------
 
-    return spin_configs, metadata
+    def get_spin_bath(self, init_states=None):
+        """Returns a random spin bath configuration."""
 
+        # calculate the number of spins in the spin bath
+        self.num_spins = self.calc_num_spins()
 
-# ------------------------------------------------------------
+        spin_types = [self.spin_type] * self.num_spins
+        spin_pos = self.choose_spin_pos()
+        if init_states is None: 
+            init_states = self.choose_init_states()
+        else:
+            assert(len(init_states) == self.num_spins), f"The number of initial states should be equal to the number of spins {self.num_spins}."
 
+        # Keyword arguments
+        kwargs_list = [self.bath_kwargs] * self.num_spins
+        if self.spin_type == "P1":
+            kwargs_P1_list = self.choose_lamor_disorders()
+            for kwargs, kwargs_P1 in zip(kwargs_list, kwargs_P1_list):
+                kwargs.update(kwargs_P1)
 
-def calc_num_spins_density(density, shape, rmin, rmax):
-    """Calculates the number of bath spins in a circle or sphere from a given density."""
+        config = list(zip(spin_types, spin_pos, init_states, kwargs_list))
+        return config
 
-    if shape == "sphere":
-        volume = 4 / 3 * np.pi * (rmax**3 - rmin**3)
-        return volume * density
+    def calc_spin_baths(self, num_baths, num_init_states, all_init_states=False):
+        """Creates bath configurations."""
 
-    elif shape == "circle":
-        area = np.pi * (rmax**2 - rmin**2)
-        return int(area * density)
+        # Initialize the list of bath configurations
+        spin_configs = []
 
+        for bath_idx in range(num_baths):
+            self.seed_spin_pos = bath_idx
 
-def calc_num_spins_abundancy(abundancy, rmin, rmax):
-    """Calculates the number of bath spins in a sphere from a given abundancy.
-    Equals the expectation value of the binomial distribution (n*p)."""
+            if all_init_states:
+                init_states_list = list(product([0,1], repeat=self.calc_num_spins()))
+                for init_states in init_states_list:
+                    spin_bath = self.get_spin_bath(init_states)
+                    spin_configs.append(spin_bath)
+            else:
+                for init_state_idx in range(num_init_states):
+                    self.seed_init_states = init_state_idx
+                    spin_bath = self.get_spin_bath()
+                    spin_configs.append(spin_bath)
 
-    V_unit = CONST["a_C"] ** 3  # volume of the unit cell
-    N_unit = CONST["N_unit"]  # number of carbon atoms per unit cell
-    density_C = N_unit / V_unit
-    density = abundancy * density_C
+        metadata = self.kwargs
+        metadata.update({"num_baths": num_baths, "num_init_states": num_init_states})
 
-    num_spins = calc_num_spins_density(density, "sphere", rmin, rmax)
-    return num_spins
-
-
-# ------------------------------------------------------------
-
-
-def choose_spin_pos(seed, num_spins, shape, rmin, rmax):
-    """Returns random positions of bath spins in cartesian coordinates within a sphere or circle."""
-
-    if shape == "sphere":
-        return choose_spin_pos_sphere(seed, num_spins, rmin, rmax)
-    elif shape == "circle":
-        return choose_spin_pos_circle(seed, num_spins, rmin, rmax)
-
-
-def choose_spin_pos_sphere(seed, num_spins, rmin, rmax):
-    """Returns random positions of bath spins in cartesian coordinates within a sphere."""
-
-    random.seed(seed)
-    r_list = [np.cbrt(random.uniform(rmin**3, rmax**3)) for _ in range(num_spins)]
-    phi_list = [float(random.uniform(0, 2 * np.pi)) for _ in range(num_spins)]
-    theta_list = [float(random.uniform(0, np.pi)) for _ in range(num_spins)]
-
-    spin_pos = []
-    for r, phi, theta in zip(r_list, phi_list, theta_list):
-        spin_pos.append(spherical_to_cartesian(r, phi, theta))
-    return spin_pos
-
-
-def choose_spin_pos_circle(seed, num_spins, rmin, rmax):
-    """Returns random positions of bath spins in cartesian coordinates within a circle."""
-
-    random.seed(seed)
-    r_list = [np.sqrt(random.uniform(rmin**2, rmax**2)) for _ in range(num_spins)]
-    phi_list = [float(random.uniform(0, 2 * np.pi)) for _ in range(num_spins)]
-    z_list = [15e-9] * num_spins
-
-    spin_pos = []
-    for r, phi, z in zip(r_list, phi_list, z_list):
-        spin_pos.append(cylindrical_to_cartesian(r, phi, z))
-    return spin_pos
-
-
-# ------------------------------------------------------------
-
-
-def choose_init_states(seed, num_spins):
-    """Returns the initial state of the bath spins."""
-
-    random.seed(seed)
-    return random.choices([0, 1], k=num_spins)
-
-
-def choose_lamor_disorders(seed, num_spins):
-    """Returns the disorder in the Lamor frequencies of P1 centers due to the hyperfine coupling between nitrogen nuclear spin and the electron
-    (that couples to the NV center). This effect depends on the nitrogen spin and P1 center delocalization axis (due to the Jahn-Teller effect).
-    """
-
-    random.seed(seed)
-    axes = ["111", "-111", "1-11", "11-1"]
-    nitrogen_spins = [-1, 0, 1]
-    axis_choice = random.choices(axes, k=num_spins)
-    nitrogen_spin_choice = random.choices(nitrogen_spins, k=num_spins)
-    return [
-        {"nitrogen_spin": nitrogen_spin_choice[i], "axis": axis_choice[i]}
-        for i in range(num_spins)
-    ]
-
+        return spin_configs, metadata
 
 # -------------------------------------------------
+
+def cut_spin_bath(bath_configs, cutoff):
+    filtered_bath_configs = []
+    for bath_config in bath_configs:
+        indices_to_remove = []
+        positions = list(zip(*bath_config))[1]
+        for i, pos in enumerate(positions):
+            if np.linalg.norm(pos) >= cutoff:
+                indices_to_remove.append(i)
+        
+        filtered_bath_config = [value for index, value in enumerate(bath_config) if index not in indices_to_remove]
+        filtered_bath_configs.append(filtered_bath_config)
+ 
+    return filtered_bath_configs
+
+def calc_bath_polarization(bath_configs):
+
+    counter = 0
+    for bath_config in bath_configs:
+        init_state = list(zip(*bath_config))[2]
+        counter += np.sum(np.array(init_state)-1/2)
+    
+    return float(counter) / len(bath_configs)
+
+def visualize_spin_bath(bath_configs, metadata):
+    
+    # bath_configs = bath_configs_nested
+    theta = np.linspace(0, 2 * np.pi, 300) 
+    x_circle = metadata["rmax"] * np.cos(theta)
+    y_circle = metadata["rmax"] * np.sin(theta)
+
+    fig, ax = plt.subplots(figsize=(5,5))
+
+    for bath_config in bath_configs:
+        if bath_config == []:
+            continue
+        coordinates = np.array(list(zip(*bath_config))[1])
+        x = coordinates[:, 0]
+        y = coordinates[:, 1]
+        ax.plot(x *1e9, y*1e9, '.', markersize=8)
+    ax.plot(x_circle*1e9, y_circle*1e9, color='k', alpha=0.5, linewidth=2)
+
+    ax.set_xlabel('x [nm]')
+    ax.set_ylabel('y [nm]')
+    return fig, ax
 
 
 def save_spin_baths(spin_configs, metadata, directory, filename):
@@ -253,6 +250,5 @@ def load_spin_baths(filename, directory, load_metadata=False):
     if load_metadata:
         return spin_configs["Configurations"], spin_configs["Metadata"]
     return spin_configs["Configurations"]
-
 
 # -------------------------------------------------

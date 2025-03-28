@@ -7,7 +7,7 @@ from qiskit.circuit import QuantumCircuit
 from qiskit.quantum_info import Operator
 
 from . import DEFAULTS
-from .hamiltonian import Hamiltonian, adjust_space_dim
+from .hamiltonian import Hamiltonian
 from .spin import get_spin_matrices
 from .utils import calc_fidelity, calc_logarithmic_negativity, spherical_to_cartesian
 
@@ -232,6 +232,9 @@ class Evolution(Hamiltonian):
     def _get_partial_gate_props_list(self, finished_gates, left_time):
         """Returns the gate properties list for a given number of finished gates and left time."""
 
+        if finished_gates == 0:
+            return [("free_evo", dict(t=left_time, dyn_dec=False))]
+
         # Create a list of the finished gates
         partial_gate_props_list = copy.deepcopy(
             self.gate_props_list[:finished_gates]
@@ -272,11 +275,6 @@ class Evolution(Hamiltonian):
 
         for t in t_list:
 
-            # Free evolution at t=0
-            # if t == 0:
-            #     gate_props_list_time.append([("free_evo", dict(t=0.0, dyn_dec=False))])
-            #     continue
-
             # Find the number of finished gates and the left time
             threshold_time = t
             finished_gates, left_time = self._get_finished_gates_and_left_time(
@@ -307,8 +305,8 @@ class Evolution(Hamiltonian):
         H_rot = omega * np.sum(n * spin_matrices)
 
         # Adjust the space dimension of the Hamiltonian with the rotation on the first register spin (NV)
-        H_rot = adjust_space_dim(self.system_num_spins, H_rot, 0)
-        return H_rot.to(data_type="CSR")
+        H_rot = self.adjust_space_dim(self.system_num_spins, H_rot, 0)
+        return H_rot.to(data_type="CSR") 
 
     def calc_U_rot(self, alpha, phi, theta=np.pi / 2):
         """Returns the unitary gate that rotates the first register spin (NV center) by an

@@ -23,3 +23,5 @@ from .environment import *
 from .visualization import *
 from .export import *
 from .suter import *
+
+from .brecht import *

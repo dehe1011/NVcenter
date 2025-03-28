@@ -83,7 +83,7 @@ class Environment2(Evolution, gym.Env):
         action = [(x + 1) / 2 for x in action]
         if instant_pulses:
             self.gate_props_list = [
-                ("free_evo", dict(t=1e-6 * action[0])),
+                ("free_evo", dict(t=5e-6 * action[0])),
                 (
                     "inst_rot",
                     dict(alpha=2 * np.pi * action[1], phi=2 * np.pi * action[2]),
@@ -183,6 +183,8 @@ class Environment2(Evolution, gym.Env):
             if self.verbose and observable == "fidelity":
                 self._check_fidelity(values.flatten())
             return values
+        
+    # -------------------------------------------------
 
     def _to_qutip(self, num_old_register_states, num_t_list, gCCE_states):
         """Converts the states to qutip objects."""
@@ -195,8 +197,6 @@ class Environment2(Evolution, gym.Env):
 
         return gCCE_states
 
-    # -------------------------------------------------
-
     def _check_state(self, states):
         """Function to check if the states are normalized and hermitian."""
 
@@ -205,6 +205,15 @@ class Environment2(Evolution, gym.Env):
             normalized = np.isclose(norm, 1, atol=5e-2)
             if not normalized:
                 print("State not normalized.", norm)
+            sx = q.expect(state, q.sigmax())
+            sy = q.expect(state, q.sigmay())
+            sz = q.expect(state, q.sigmaz())
+            if abs(sx) > (1 + 1e-3):
+                print("Sigma X: ", sx)
+            if abs(sy) > (1 + 1e-3):
+                print("Sigma Y: ", sy)
+            if abs(sz) > (1 + 1e-3):
+                print("Sigma Z: ", sz)
             hermitian = np.allclose(state.full(), state.dag().full(), atol=1e-5)
             if not hermitian:
                 print("State not hermitian.")
@@ -217,6 +226,8 @@ class Environment2(Evolution, gym.Env):
             if not 0 - 1e-1 <= fidelity <= 1 + 1e-1:
                 print("Fidelity not between 0 and 1.", fidelity)
         print("Fidelity check done.")
+
+    # -------------------------------------------------
 
     def _get_gCCE_states(self, bath_config, t_list, old_register_states):
         """Function to compute the bath quantities with different gCCE orders."""
@@ -231,8 +242,6 @@ class Environment2(Evolution, gym.Env):
         # gCCE0
         self.approx_level = "gCCE0"
         states_gCCE0 = self.get_states(t_list, old_register_states)
-        if self.verbose:
-            self._check_state(states_gCCE0.flatten())
 
         for init_idx, time_idx in product(
             range(num_old_register_states), range(num_t_list)
@@ -250,8 +259,6 @@ class Environment2(Evolution, gym.Env):
         # gCCE1
         self.approx_level = "gCCE1"
         states_gCCE1 = self.get_states(t_list, old_register_states)
-        if self.verbose:
-            self._check_state(states_gCCE1.flatten())
 
         for init_idx, time_idx in product(
             range(num_old_register_states), range(num_t_list)
@@ -273,8 +280,6 @@ class Environment2(Evolution, gym.Env):
         # gCCE2
         self.approx_level = "gCCE2"
         states_gCCE2 = self.get_states(t_list, old_register_states)
-        if self.verbose:
-            self._check_state(states_gCCE2.flatten())
 
         for init_idx, time_idx in product(
             range(num_old_register_states), range(num_t_list)
@@ -311,8 +316,6 @@ class Environment2(Evolution, gym.Env):
         # gCCE0
         self.approx_level = "gCCE0"
         values_gCCE0 = self.get_values(observable, t_list, old_register_states)
-        if self.verbose and observable == "fidelity":
-            self._check_fidelity(values_gCCE0.flatten())
 
         # calculation of gCCE0
         gCCE_values = values_gCCE0[:, :, 0]
@@ -328,8 +331,6 @@ class Environment2(Evolution, gym.Env):
         values_gCCE1 = self.get_values(
             observable, old_register_states=old_register_states, t_list=t_list
         )
-        if self.verbose and observable == "fidelity":
-            self._check_fidelity(values_gCCE1.flatten())
 
         # calculation of gCCE1
         for i in self.idx_gCCE1:
@@ -346,8 +347,6 @@ class Environment2(Evolution, gym.Env):
         values_gCCE2 = self.get_values(
             observable, old_register_states=old_register_states, t_list=t_list
         )
-        if self.verbose and observable == "fidelity":
-            self._check_fidelity(values_gCCE2.flatten())
 
         # calculation of gCCE2
         for i, idx_gCCE2 in enumerate(self.idx_gCCE2):
@@ -367,6 +366,9 @@ class Environment2(Evolution, gym.Env):
     def _calc_quantity(self, bath_config, quantity, t_list, old_register_states):
         """Function to compute bath quantities in parallel."""
 
+        if bath_config == []:
+            return self._get_no_bath(quantity, t_list, old_register_states)
+
         if self.env_approx_level == "full_bath":
             return self._get_full_bath(bath_config, quantity, t_list, old_register_states)
 
@@ -385,7 +387,7 @@ class Environment2(Evolution, gym.Env):
         return self._calc_quantity(bath_config, quantity, t_list, old_register_states)
 
     def calc_quantites(self, quantity, bath_configs, t_list, old_register_states):
-        
+
         if bath_configs is None:
             bath_configs = self.bath_configs
         if t_list is None:
@@ -396,7 +398,7 @@ class Environment2(Evolution, gym.Env):
         if self.env_approx_level == "no_bath":
             return self._get_no_bath(quantity, t_list, old_register_states)
 
-        disable_tqdm = not self.verbose
+        disable_tqdm = not True
         message = f"Sampling over spin baths..."
 
         quantites_baths = np.zeros(
@@ -427,12 +429,12 @@ class Environment2(Evolution, gym.Env):
                 )
             quantites_baths = sum(results)
 
-        return 1 / self.num_bath_configs * quantites_baths
+        return 1 / len(bath_configs) * quantites_baths
 
-    def calc_states(self, bath_configs=None, t_list=None, old_register_states=None):
+    def calc_states(self, t_list=None, old_register_states=None, bath_configs=None):
         return self.calc_quantites("states", bath_configs, t_list, old_register_states)
 
-    def calc_values(self, observable,  bath_configs=None, t_list=None, old_register_states=None):
+    def calc_values(self, observable, t_list=None, old_register_states=None, bath_configs=None):
         return self.calc_quantites(observable, bath_configs, t_list, old_register_states)
 
 

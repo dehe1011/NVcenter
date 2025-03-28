@@ -38,8 +38,10 @@ constants:
   P_gs: -5.08e+6  # Hz, Dominik
   # P_gs: -4.96.e+6 # Hz, Suter
 
-  # Fermi contact interactions
-  N_zz: -1.76e+6  # Hz
+  # Hyperfine interaction with Fermi contact term
+  N_zz: -1.76e+6  # Hz # -1.73e+6!!
+  N_xx: -2.16e+6  # Hz
+  N_yy: -2.16e+6  # Hz
   A_N: -2.16e+6 # Hz, Suter
   m_N: -1
 

@@ -3,25 +3,28 @@ import qutip as q
 
 # -------------------------------------------------
 
-
-def calc_miri_list(env, t_end, t_steps, pauli=True):
-    HGate = env.calc_U_rot(np.pi, 0, theta=np.pi / 4)
+def calc_miri_list(env, t_end, t_steps, pauli=True, old_register_states=None):
+    HGate = 1j * env.calc_U_rot(np.pi, 0, theta=np.pi / 4)
+    HGate_phase = 1j * env.calc_U_rot(np.pi, np.pi/2, theta=np.pi / 4) # np.pi/2
 
     # time list
     t_list = np.linspace(0, t_end, t_steps)
     env.gate_props_list = [("free_evo", dict(t=t_end))]
 
     # initial states
-    xp, xm = q.sigmax().eigenstates()[1]
+    xm, xp = q.sigmax().eigenstates()[1]
     xp, xm = xp * xp.dag(), xm * xm.dag()
-    yp, ym = q.sigmay().eigenstates()[1]
+    ym, yp = q.sigmay().eigenstates()[1]
     yp, ym = yp * yp.dag(), ym * ym.dag()
     zp, zm = q.sigmaz().eigenstates()[1]
-    zp, zm = zp * zp.dag(), zm * zm.dag()
-    old_register_states = [HGate * dm * HGate for dm in [xp, xm, yp, ym, zp, zm]]
+    zm, zp = zp * zp.dag(), zm * zm.dag()
+    if old_register_states is None:
+        old_register_states = [HGate * dm * HGate for dm in [xp, xm, yp, ym, zp, zm]]
+    else: 
+        old_register_states = [HGate * dm * HGate for dm in old_register_states]
 
     states = env.calc_states(t_list=t_list, old_register_states=old_register_states)
-    states = np.array([[HGate * dm * HGate for dm in row] for row in states])
+    states = np.array([[HGate_phase * dm * HGate_phase for dm in row] for row in states])
 
     if pauli:
         sigmax = np.array(
@@ -34,7 +37,7 @@ def calc_miri_list(env, t_end, t_steps, pauli=True):
             [[q.expect(dm, q.sigmaz()).real for dm in row] for row in states]
         )
 
-        return np.array([sigmax, sigmay, sigmaz])
+        miri_list = np.array([sigmax, sigmay, sigmaz])
 
     else:
         pop0 = np.array(
@@ -44,7 +47,9 @@ def calc_miri_list(env, t_end, t_steps, pauli=True):
             [[q.expect(dm, q.fock_dm(2, 1)).real for dm in row] for row in states]
         )
 
-        return np.array([pop0, pop1])
+        miri_list = np.array([pop0, pop1])
+    
+    return np.transpose(miri_list, (1, 0, 2))
 
 
 def calc_miri_list2(env, t_end, t_steps, pauli=True):

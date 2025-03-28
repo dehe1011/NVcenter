@@ -2,22 +2,11 @@ import time
 from multiprocessing import cpu_count
 from tqdm import tqdm
 import qutip as q
+import numpy as np
 
-from . import DEFAULTS
+from . import DEFAULTS, CONST
 from .spins import Spins
 from .utils import get_dipolar_matrix, calc_H_int
-
-# -------------------------------------------------
-
-
-def adjust_space_dim(num_spins, operator, position):
-    """Helper function to adjust the Hilbert space dimension of an operator to
-    the number of spins in the system."""
-
-    operator_list = [q.qeye(2)] * num_spins
-    operator_list[position] = operator
-    return q.tensor(operator_list)
-
 
 # -------------------------------------------------
 
@@ -62,14 +51,17 @@ class Hamiltonian(Spins):
         self.verbose = kwargs.get("verbose", DEFAULTS["verbose"])
         self.full_verbose = kwargs.get("full_verbose", DEFAULTS["full_verbose"])
 
+        # dimensions
+        self.register_dim_list = [spin.spin_dim for spin in self.register_spins]
+        self.bath_dim_list = [spin.spin_dim for spin in self.bath_spins]
+
         # spin operators in the larger Hilbert space
         self.register_spin_ops = self.calc_spin_ops(self.register_spins)
         self.system_spin_ops = self.calc_spin_ops(self.system_spins_list[0])
 
         # identity operators and dimensions for register and system
-        self.register_identity = q.tensor(
-            [q.qeye(2) for _ in range(self.register_num_spins)]
-        )
+        self.register_identity = q.tensor([q.qeye(dim) for dim in self.register_dim_list])
+
         self.register_dims = self.register_identity.dims
         self.system_identity = self.system_spin_ops[0][0]
         self.system_dims = self.system_identity.dims
@@ -86,12 +78,21 @@ class Hamiltonian(Spins):
 
     # -------------------------------------------------
 
+    def adjust_space_dim(self, num_spins, operator, position):
+        """Helper function to adjust the Hilbert space dimension of an operator to
+        the number of spins in the system."""
+
+        dims = self.register_dim_list + self.bath_dim_list
+        operator_list = [q.qeye(dim) for dim in dims[:num_spins]]
+        operator_list[position] = operator
+        return q.tensor(operator_list)
+
     def calc_spin_ops(self, spins):
         """Returns the spin operators I, Sx, Sy and Sz in the Hilbert sapce of the system."""
 
         spin_ops = []
         for i, spin in enumerate(spins):
-            spin_op = [adjust_space_dim(len(spins), op, i) for op in spin.S]
+            spin_op = [self.adjust_space_dim(len(spins), op, i) for op in spin.S]
             spin_ops.append(spin_op)
         return spin_ops
 
@@ -108,7 +109,7 @@ class Hamiltonian(Spins):
         """Calculates the totally mixed thermal state of the bath."""
 
         if self.thermal_bath:
-            bath_identity = q.tensor([q.qeye(2) for _ in range(self.bath_num_spins)])
+            bath_identity = q.tensor([q.qeye(dim) for dim in self.bath_dim_list])
             bath_init_state = 1 / (2**self.bath_num_spins) * bath_identity
 
         else:
@@ -125,6 +126,8 @@ class Hamiltonian(Spins):
             return [register_state]
 
         if self.approx_level == "full_bath":
+            if self.bath_num_spins == 0:
+                return [register_state]
             bath_init_state = self.calc_bath_init_state()
             return [q.tensor(register_state, bath_init_state)]
 
@@ -146,23 +149,27 @@ class Hamiltonian(Spins):
         system_num_spins = len(system_spins)
         H = 0
         for i, spin1 in enumerate(system_spins):
-            H += adjust_space_dim(system_num_spins, spin1.H, i)
+            H += self.adjust_space_dim(system_num_spins, spin1.H, i)
             for j, spin2 in enumerate(system_spins):
                 if j > i:
                     spin_op1 = self.system_spin_ops[i]
                     spin_op2 = self.system_spin_ops[j]
-                    dipolar_matrix = get_dipolar_matrix(
-                        spin1.spin_pos,
-                        spin2.spin_pos,
-                        spin1.gamma,
-                        spin2.gamma,
-                        suter_method=self.suter_method,
-                    )
+                    if spin1.spin_type == 'NV' and spin2.spin_type == 'N':
+                        dipolar_matrix = np.diag([CONST['N_xx'], CONST['N_yy'], CONST['N_zz']])
+                    else:
+                        dipolar_matrix = get_dipolar_matrix(  
+                            spin1.spin_pos,
+                            spin2.spin_pos,
+                            spin1.gamma,
+                            spin2.gamma,
+                            suter_method=self.suter_method,
+                        )
 
                     # the NV spin is not flipped by the surrounding spins
-                    if spin1.spin_type == "NV0":
+                    if not spin1.can_flip:
                         dipolar_matrix[0, :] = [0, 0, 0]
                         dipolar_matrix[1, :] = [0, 0, 0]
+                    print(dipolar_matrix)
                     H += calc_H_int(spin_op1, spin_op2, dipolar_matrix)
         return H
 
@@ -174,7 +181,7 @@ class Hamiltonian(Spins):
         for i, system_spin in enumerate(system_spins):
             Sz = self.system_spin_ops[i][3]
             for mf_spin in mf_spins:
-                Ez = mf_spin.init_spin - 1 / 2  # 0,1 -> -1/2, 1/2
+                Ez = mf_spin.mz
                 dipolar_matrix = get_dipolar_matrix(
                     system_spin.spin_pos,
                     mf_spin.spin_pos,
@@ -182,13 +189,16 @@ class Hamiltonian(Spins):
                     mf_spin.gamma,
                     suter_method=self.suter_method,
                 )
+                # zz interaction
                 dipolar_component = dipolar_matrix[2, 2]
                 H += Ez * dipolar_component * Sz
         return H
 
     def calc_matrix(self, i):
-        H_system = self.calc_H_system(self.system_spins_list[i])
-        H_mf = self.calc_H_mf(self.system_spins_list[i], self.mf_spins_list[i])
+        system_spins = self.system_spins_list[i]
+        mf_spins = self.mf_spins_list[i]
+        H_system = self.calc_H_system(system_spins)
+        H_mf = self.calc_H_mf(system_spins, mf_spins)
         return H_system + H_mf
 
     # -------------------------------------------------

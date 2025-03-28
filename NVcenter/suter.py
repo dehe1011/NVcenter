@@ -4,7 +4,6 @@ import qutip as q
 from . import CONST
 from .utils import get_dipolar_matrix
 from .spins import Spins
-from .hamiltonian import adjust_space_dim
 
 
 def H_Suter():
@@ -31,7 +30,7 @@ def H_Suter():
     # ) * adjust_space_dim(2, sz_NV, 0)
 
     H = (
-        -vc * adjust_space_dim(2, sz, 1)
+        -vc * q.tensor(q.qeye(2), sz)
         + A_zz * q.tensor(sz_NV, sz)
         + A_zx * q.tensor(sz_NV, sx)
     )

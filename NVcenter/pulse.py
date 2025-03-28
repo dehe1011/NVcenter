@@ -8,7 +8,7 @@ from qiskit.circuit import QuantumCircuit
 from qiskit.quantum_info import Operator
 
 from . import DEFAULTS
-from .hamiltonian import Hamiltonian, adjust_space_dim
+from .hamiltonian import Hamiltonian
 from .spin import get_spin_matrices
 from .utils import calc_fidelity, calc_logarithmic_negativity, spherical_to_cartesian
 
@@ -233,7 +233,7 @@ class Pulse(Hamiltonian):
         H_rot = omega * np.sum(
             n * get_spin_matrices(1 / 2)[1:]
         )  # factor 1/2 times Pauli matrices
-        H_rot = adjust_space_dim(self.system_num_spins, H_rot, 0)
+        H_rot = self.adjust_space_dim(self.system_num_spins, H_rot, 0)
         return H_rot.to(data_type="CSR")
 
     def calc_U_rot(self, alpha, phi, theta=np.pi / 2):

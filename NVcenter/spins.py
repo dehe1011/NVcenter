@@ -52,6 +52,7 @@ class Spins:
         self.register_spins = [
             Spin(*spin_config) for spin_config in self.register_config
         ]
+        self.bath_spins = []
         if self.bath_num_spins > 0:
             self.bath_spins = [Spin(*spin_config) for spin_config in self.bath_config]
 
