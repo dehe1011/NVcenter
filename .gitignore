@@ -5,6 +5,8 @@
 .pre-commit-config.yaml
 howto/
 TODO.txt
+export/
+baths/
 
 ppo_cartpole_tensorboard/
 
