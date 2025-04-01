@@ -169,7 +169,6 @@ class Hamiltonian(Spins):
                     if not spin1.can_flip:
                         dipolar_matrix[0, :] = [0, 0, 0]
                         dipolar_matrix[1, :] = [0, 0, 0]
-                    print(dipolar_matrix)
                     H += calc_H_int(spin_op1, spin_op2, dipolar_matrix)
         return H
 

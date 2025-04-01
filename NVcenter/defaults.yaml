@@ -1,5 +1,5 @@
 # Note: unit Hz means frequency, not angular frequency
-verbose: True
+verbose: False
 full_verbose: False
 
 # Spins keywords

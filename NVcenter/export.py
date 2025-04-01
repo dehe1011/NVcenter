@@ -5,7 +5,7 @@ import qutip as q
 
 def calc_miri_list(env, t_end, t_steps, pauli=True, old_register_states=None):
     HGate = 1j * env.calc_U_rot(np.pi, 0, theta=np.pi / 4)
-    HGate_phase = 1j * env.calc_U_rot(np.pi, np.pi/2, theta=np.pi / 4) # np.pi/2
+    HGate_phase = 1j * env.calc_U_rot(np.pi, 0, theta=np.pi / 4) # np.pi/2
 
     # time list
     t_list = np.linspace(0, t_end, t_steps)
