@@ -2,7 +2,7 @@ import numpy as np
 import qutip as q
 from qutip import gates
 
-from . import CONST
+from . import CONST, DEFAULTS
 
 # -------------------------------------------
 
@@ -92,7 +92,7 @@ class Spin:
 
         # Magnetic field in [111] direction of the NV center
         self.Bz = self.kwargs.get("Bz", CONST["Bz"])
-        self.can_flip = self.kwargs.get("can_flip", True)
+        self.can_flip = self.kwargs.get("can_flip", DEFAULTS["can_flip"])
 
         # --------------------------------------------
 
@@ -110,7 +110,7 @@ class Spin:
             self.m_N = self.kwargs.get("m_N", CONST["m_N"])
 
             # Truncated NV center (reduced to a TLS)
-            self.truncated = self.kwargs.get("truncated", True)
+            self.truncated = self.kwargs.get("truncated", DEFAULTS["truncated"])
 
             if self.truncated:
                 self.spin_dim = 2
@@ -130,7 +130,7 @@ class Spin:
             self.renormalization = self.m_N * self.N_zz  # 1.76 MHz
             # self.renormalization = self.m_N * self.A_N # 2.16 MHz
 
-            self.rotating_frame = self.kwargs.get("rotating_frame", False)
+            self.rotating_frame = self.kwargs.get("rotating_frame", DEFAULTS["rotating_frame"])
             if self.rotating_frame:
                 self.can_flip = False
                 self.H = q.Qobj([[0]*self.spin_dim, [0]*self.spin_dim])

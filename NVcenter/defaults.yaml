@@ -1,28 +1,57 @@
 # Note: unit Hz means frequency, not angular frequency
-verbose: False
-full_verbose: False
 
-# Spins keywords
+# Spin keywords (11)
+can_flip: True
+truncated: True
+rotating_frame: False
+
+# SpinBath keywords (13)
+# bath_kwargs: {}
+shape: "sphere"
+rmin: 0.0  # m
+rmax: 10.e-9  # m
+# density: None
+# abundancy: None
+depth: 10.e-9  # m, depth of the NV center in the diamond lattice
+sample: False 
+num_spins: 0 
+# seed_num_spins: 123
+# seed_spin_pos: 123
+# seed_init_states: 123
+# seed_lamor_disorders: 123
+
+# Spins keywords (4)
 approx_level: 'no_bath'
 gCCE1_cutoff: 100.e-9
 gCCE2_cutoff: 55.e-9 # Dominik
+# bath_config: []
 
-# Hamiltonian keywords
+# Hamiltonian keywords (5)
 thermal_bath: True
 suter_method: False
 parallelization: False
+verbose: False
+full_verbose: False
 
-# Pulse keywords
-pulse_seq: [0]
-gate_props_list: []
-env_approx_level: 'no_bath'
-dynamical_decoupling: False
+# Evolution keywords (9)
+# old_register_states: [self.register_init_state]
+# gate_props_list: []
+# target: self.register_identity
 dyn_dec: False
-instant_pulses: False
 rabi_frequency: 0.5e+6  # Hz, used by Suter
 dm_offset: 1.e-5
 fidelity_offset: 1.e-5
 num_hahn_echos: 0
+t_list: "final"
+
+# Environment2 keywords (2)
+# bath_configs: [[]]
+env_approx_level: 'no_bath'
+
+# Pulse keywords (old)
+pulse_seq: [0]
+dynamical_decoupling: False
+instant_pulses: False
 
 constants:
   # Carcon lattice constant 

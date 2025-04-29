@@ -102,12 +102,13 @@ class Environment2(Evolution, gym.Env):
         i = random.randint(0, self.num_bath_configs - 1)
         bath_configs = [self.bath_configs[i]]
 
-        self.current_state = self.calc_states(bath_configs)[0, 0]
-        # self.fidelity = self.calc_values('fidelity', bath_configs)[0,0]
+        self.current_state = self.calc_states(bath_configs=bath_configs)[0, 0]
         self.current_state = q.Qobj(self.current_state, dims=self.target.dims)
         self.fidelity = calc_fidelity(self.current_state, self.target)
-
         self.observation = get_observation(self.current_state)
+
+        # self.fidelity = self.calc_values('fidelity', bath_configs)[0,0]
+        # self.observation = None
 
         # done
         if self.count == self.max_steps:
@@ -398,7 +399,7 @@ class Environment2(Evolution, gym.Env):
         if self.env_approx_level == "no_bath":
             return self._get_no_bath(quantity, t_list, old_register_states)
 
-        disable_tqdm = not True
+        disable_tqdm = not False # True
         message = f"Sampling over spin baths..."
 
         quantites_baths = np.zeros(

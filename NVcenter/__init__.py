@@ -17,11 +17,7 @@ from .hamiltonian import *
 from .evolution import *
 from .environment2 import *
 
-from .pulse import *
-from .environment import *
+from .legacy import *
 
 from .visualization import *
 from .export import *
-from .suter import *
-
-from .brecht import *

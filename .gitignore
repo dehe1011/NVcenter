@@ -7,6 +7,7 @@ howto/
 TODO.txt
 export/
 baths/
+delete/
 
 ppo_cartpole_tensorboard/
 

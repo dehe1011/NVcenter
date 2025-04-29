@@ -28,8 +28,7 @@ def is_extremal(choi):
     rank = stacked.rank()
     _is_extremal = (rank == stacked.shape[1])
 
-    if _is_extremal:
-        print("Choi matrix already describes to an extremal map.")  
+    print('Is extremal?', _is_extremal) 
     return bool(_is_extremal)
 
 def is_ancilla_required(choi):
@@ -37,8 +36,12 @@ def is_ancilla_required(choi):
     operation and can be realized without an ancilla. """
 
     STM = Choi_to_STM(choi)
-    print("If this return an identity the choi matrix describes a unitary and can be implemented without an ancilla. ")
-    return STM * STM.H
+    difference = (STM * STM.H) - sp.eye(4)
+    
+    _is_unitary = all(sp.simplify(e) == 0 for e in difference)
+    
+    print("Ancilla required?", not _is_unitary)
+    return not bool(_is_unitary)
 
 # -------------------------------------------------
 # 1. Construct the STM for the forward map by process tomography

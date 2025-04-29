@@ -57,9 +57,7 @@ class Evolution(Hamiltonian):
         self.old_register_states = kwargs.get(
             "old_register_states", [self.register_init_state]
         )
-        self._gate_props_list = kwargs.get(
-            "gate_props_list", DEFAULTS["gate_props_list"]
-        )
+        self._gate_props_list = kwargs.get("gate_props_list", [])
         self.target = kwargs.get("target", self.register_identity)
         self.dyn_dec = kwargs.get("dyn_dec", DEFAULTS["dyn_dec"])
         self.rabi_frequency = kwargs.get("rabi_frequency", DEFAULTS["rabi_frequency"])
@@ -187,7 +185,7 @@ class Evolution(Hamiltonian):
         self.total_gate_time = sum(self.gate_time_list)
 
         # List of time steps for the evolution
-        self._t_list = kwargs.get("t_list", "final")
+        self._t_list = kwargs.get("t_list", DEFAULTS["t_list"])
         if isinstance(self._t_list, str):
             if self._t_list == "final":
                 self._t_list = [self.total_gate_time]
@@ -496,7 +494,7 @@ class Evolution(Hamiltonian):
         # Calculate the inital states for each system
         system_init_states_init = [
             self.calc_system_init_states(register_state)
-            for register_state in old_register_states
+            for register_state in old_register_states 
         ]
 
         # Calculate the gates for each time step

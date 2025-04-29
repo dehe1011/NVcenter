@@ -27,6 +27,24 @@ def get_unvec(vec):
     return sp.Matrix(dim, dim, lambda i, j: vec[j * dim + i])
 
 # --------------------------------------------------
+# Check CP and TP conditions for Choi matrices.
+# --------------------------------------------------
+
+def is_completely_positive(choi):
+    """ Check if the Choi matrix is completely positive. """
+
+    print('Are eigenvalues non-negative?')
+    return list(choi.eigenvals().keys())
+
+
+def is_trace_preserving(choi):
+    """ Check if the Choi matrix is trace-preserving. """
+
+    print('Is the trace equal to identity?')
+    return sp.simplify(choi[0::2, 0::2] + choi[1::2, 1::2])
+
+
+# --------------------------------------------------
 # Basis change matrices between standard and pauli representations.
 # --------------------------------------------------
 

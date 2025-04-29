@@ -4,7 +4,7 @@ import json
 import numpy as np
 import matplotlib.pyplot as plt
 
-from . import CONST
+from . import CONST, DEFAULTS
 from .utils import spherical_to_cartesian, cylindrical_to_cartesian
 
 # ------------------------------------------------------------
@@ -16,9 +16,9 @@ class SpinBath:
         self.bath_kwargs = kwargs.get("bath_kwargs", {})
 
         # calculate the shape and dimensions of the spin bath
-        self.shape = self.kwargs.get("shape", "sphere")
-        self.rmin = self.kwargs.get("rmin", 0)
-        self.rmax = self.kwargs.get("rmax", 10e-9)
+        self.shape = self.kwargs.get("shape", DEFAULTS["shape"])
+        self.rmin = self.kwargs.get("rmin", DEFAULTS["rmin"])
+        self.rmax = self.kwargs.get("rmax", DEFAULTS["rmax"])
 
         # calculate the density of the spin bath
         self.density = self.kwargs.get("density")
@@ -29,9 +29,9 @@ class SpinBath:
             self.shape = "sphere" # abundancy only defined for a sphere
             self.density = self.abundancy * self.density_C
 
-        self.depth = self.kwargs.get("depth", 10e-9)
-        self.sample = self.kwargs.get("sample", False)
-        self.num_spins = self.kwargs.get("num_spins", 0)
+        self.depth = self.kwargs.get("depth", DEFAULTS["depth"])
+        self.sample = self.kwargs.get("sample", DEFAULTS["sample"])
+        self.num_spins = self.kwargs.get("num_spins", DEFAULTS["num_spins"])
 
         self.seed_num_spins = self.kwargs.get("seed_num_spins", 123)
         self.seed_spin_pos = self.kwargs.get("seed_spin_pos", 123)

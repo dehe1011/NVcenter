@@ -31,19 +31,18 @@ def is_extremal(choi):
     rank = np.linalg.matrix_rank(stacked, tol=1e-5)
     _is_extremal = (rank == stacked.shape[1])
 
-    if _is_extremal:
-        print("Choi matrix already describes to an extremal map.")  
+    print('Is extremal?', _is_extremal) 
     return bool(_is_extremal)
 
 def is_ancilla_required(choi):
-        """ If the STM is unitary, the map describes a quantum channel of a unitary 
-        operation and can be realized without an ancilla. """
+    """ If the STM is unitary, the map describes a quantum channel of a unitary 
+    operation and can be realized without an ancilla. """
 
-        STM = Choi_to_STM(choi)
-        _is_unitary = np.allclose((STM * STM.dag()).full(), np.eye(4), atol=1e-5)
-        if _is_unitary:
-            print("Extremal channel does not require an ancilla.")
-        return bool(_is_unitary)
+    STM = Choi_to_STM(choi)
+    _is_unitary = np.allclose((STM * STM.dag()).full(), np.eye(4), atol=1e-5)
+    
+    print("Ancilla required?", not _is_unitary)
+    return not bool(_is_unitary)
 
 # --------------------------------------------------
 # 1. Construct the PTM for the forward map by process tomography
