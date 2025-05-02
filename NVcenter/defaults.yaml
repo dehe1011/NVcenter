@@ -22,7 +22,7 @@ num_spins: 0
 
 # Spins keywords (4)
 approx_level: 'no_bath'
-gCCE1_cutoff: 100.e-9
+gCCE1_cutoff: 100.e-6
 gCCE2_cutoff: 55.e-9 # Dominik
 # bath_config: []
 

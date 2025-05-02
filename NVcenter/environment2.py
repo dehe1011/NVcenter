@@ -248,7 +248,7 @@ class Environment2(Evolution, gym.Env):
             range(num_old_register_states), range(num_t_list)
         ):
             # calculation of gCCE0
-            gCCE_states[init_idx, time_idx] = states_gCCE0[init_idx, time_idx, 0].full()
+            gCCE_states[init_idx, time_idx] = states_gCCE0[init_idx, time_idx, 0].full().copy()
 
         # return gCCE0
         if self.env_approx_level == "gCCE0":
@@ -319,7 +319,7 @@ class Environment2(Evolution, gym.Env):
         values_gCCE0 = self.get_values(observable, t_list, old_register_states)
 
         # calculation of gCCE0
-        gCCE_values = values_gCCE0[:, :, 0]
+        gCCE_values = values_gCCE0[:, :, 0].copy()
 
         # return gCCE0
         if self.env_approx_level == "gCCE0":
