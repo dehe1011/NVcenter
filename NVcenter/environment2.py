@@ -2,6 +2,7 @@ import time
 import random
 from itertools import product
 import multiprocessing
+import pickle
 
 from tqdm import tqdm
 import numpy as np
@@ -30,6 +31,9 @@ def get_state(observation, dims):
     imag_part = observation[length // 2 :]
     return q.Qobj(real_part, dims=dims) + 1j * q.Qobj(imag_part, dims=dims)
 
+def chunk_list(lst, chunk_size=1000):
+    for i in range(0, len(lst), chunk_size):
+        yield lst[i:i + chunk_size]
 
 # -------------------------------------------------
 
@@ -83,7 +87,7 @@ class Environment2(Evolution, gym.Env):
         action = [(x + 1) / 2 for x in action]
         if instant_pulses:
             self.gate_props_list = [
-                ("free_evo", dict(t=5e-6 * action[0])),
+                ("free_evo", dict(t=2e-6 * action[0])),
                 (
                     "inst_rot",
                     dict(alpha=2 * np.pi * action[1], phi=2 * np.pi * action[2]),
@@ -100,14 +104,14 @@ class Environment2(Evolution, gym.Env):
 
         # choose a random bath configuration
         i = random.randint(0, self.num_bath_configs - 1)
-        bath_configs = [self.bath_configs[i]]
+        bath_configs_idx = [i]
 
-        self.current_state = self.calc_states(bath_configs=bath_configs)[0, 0]
-        self.current_state = q.Qobj(self.current_state, dims=self.target.dims)
+        self.current_state = self.calc_states(bath_configs_idx=bath_configs_idx)[0, 0]
         self.fidelity = calc_fidelity(self.current_state, self.target)
+        self.current_state = q.Qobj(self.current_state, dims=self.target.dims)
         self.observation = get_observation(self.current_state)
 
-        # self.fidelity = self.calc_values('fidelity', bath_configs)[0,0]
+        # self.fidelity = self.calc_values('fidelity', bath_configs_idx=bath_configs_idx)[0,0]
         # self.observation = None
 
         # done
@@ -384,13 +388,13 @@ class Environment2(Evolution, gym.Env):
 
     def _calc_quantity_wrapper(self, args):
         """Wrapper function for multiprocessing"""
-        bath_config, quantity, t_list, old_register_states = args
-        return self._calc_quantity(bath_config, quantity, t_list, old_register_states)
+        i, quantity, t_list, old_register_states = args
+        return self._calc_quantity(self.bath_configs[i], quantity, t_list, old_register_states)
 
-    def calc_quantites(self, quantity, bath_configs, t_list, old_register_states):
+    def calc_quantites(self, quantity, bath_configs_idx, t_list, old_register_states):
 
-        if bath_configs is None:
-            bath_configs = self.bath_configs
+        if bath_configs_idx is None:
+            bath_configs_idx = range(self.num_bath_configs)
         if t_list is None:
             t_list = self.t_list
         if old_register_states is None:
@@ -399,8 +403,8 @@ class Environment2(Evolution, gym.Env):
         if self.env_approx_level == "no_bath":
             return self._get_no_bath(quantity, t_list, old_register_states)
 
-        disable_tqdm = not False # True
-        message = f"Sampling over spin baths..."
+        disable_tqdm = not True # True
+        message = "Sampling over spin baths..."
 
         quantites_baths = np.zeros(
             (len(old_register_states), len(t_list)), dtype=object
@@ -408,35 +412,37 @@ class Environment2(Evolution, gym.Env):
 
         if not self.parallelization:
             for i in tqdm(
-                range(len(bath_configs)), desc=message, disable=disable_tqdm
+                bath_configs_idx, desc=message, disable=disable_tqdm
             ):
                 quantites_baths += self._calc_quantity(
-                    bath_configs[i], quantity, t_list, old_register_states
+                    i, quantity, t_list, old_register_states
                 )
 
         else:
-            with multiprocessing.Pool(processes=multiprocessing.cpu_count()) as pool:
+            with multiprocessing.Pool(processes=self.num_cpu) as pool:
+                # for i, chunk in enumerate(chunk_list(bath_configs_idx, chunk_size=10000)):
+                results = []
                 args = [
-                    (bath_configs[i], quantity, t_list, old_register_states)
-                    for i in range(len(bath_configs))
+                    (i, quantity, t_list, old_register_states)
+                    for i in bath_configs_idx
                 ]
                 results = list(
-                    tqdm(
-                        pool.imap(self._calc_quantity_wrapper, args),
-                        total=self.num_bath_configs,
+                    tqdm( 
+                        pool.imap(self._calc_quantity_wrapper, args, chunksize=len(bath_configs_idx)//100),
+                        total=len(bath_configs_idx),
                         desc=message,
                         disable=disable_tqdm,
                     )
                 )
-            quantites_baths = sum(results)
+                quantites_baths += sum(results)
 
-        return 1 / len(bath_configs) * quantites_baths
+        return 1 / len(bath_configs_idx) * quantites_baths
 
-    def calc_states(self, t_list=None, old_register_states=None, bath_configs=None):
-        return self.calc_quantites("states", bath_configs, t_list, old_register_states)
+    def calc_states(self, t_list=None, old_register_states=None, bath_configs_idx=None):
+        return self.calc_quantites("states", bath_configs_idx, t_list, old_register_states)
 
-    def calc_values(self, observable, t_list=None, old_register_states=None, bath_configs=None):
-        return self.calc_quantites(observable, bath_configs, t_list, old_register_states)
+    def calc_values(self, observable, t_list=None, old_register_states=None, bath_configs_idx=None):
+        return self.calc_quantites(observable, bath_configs_idx, t_list, old_register_states)
 
 
 # -------------------------------------------------

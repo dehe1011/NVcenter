@@ -64,7 +64,7 @@ class SpinBath:
                 num_spins = np.random.binomial(n, p)
             else: 
                 # expectation value of the binomial distribution (n*p)
-                num_spins = int(area * self.density) 
+                num_spins = round(area * self.density) 
 
         return num_spins
     
@@ -162,17 +162,20 @@ class SpinBath:
         # Initialize the list of bath configurations
         spin_configs = []
 
-        for bath_idx in range(num_baths):
-            self.seed_spin_pos = bath_idx
+        if all_init_states:
+            init_states_list = list(product([0,1], repeat=self.calc_num_spins()))
+            for init_states in init_states_list:
 
-            if all_init_states:
-                init_states_list = list(product([0,1], repeat=self.calc_num_spins()))
-                for init_states in init_states_list:
+                for bath_idx in range(num_baths):
+                    self.seed_spin_pos = bath_idx
                     spin_bath = self.get_spin_bath(init_states)
                     spin_configs.append(spin_bath)
-            else:
-                for init_state_idx in range(num_init_states):
-                    self.seed_init_states = init_state_idx
+        else:
+            for init_state_idx in range(num_init_states):
+                self.seed_init_states = init_state_idx
+
+                for bath_idx in range(num_baths):
+                    self.seed_spin_pos = bath_idx
                     spin_bath = self.get_spin_bath()
                     spin_configs.append(spin_bath)
 

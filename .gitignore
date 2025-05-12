@@ -5,8 +5,15 @@
 .pre-commit-config.yaml
 howto/
 TODO.txt
-export/
-baths/
+export/*
+baths/*
+
+# But keep the .important subfolders and their contents
+# !export/.important/
+# !export/.important/**
+# !baths/.important/
+# !baths/.important/**
+
 delete/
 
 ppo_cartpole_tensorboard/
