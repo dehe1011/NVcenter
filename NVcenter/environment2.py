@@ -60,7 +60,14 @@ class Environment2(Evolution, gym.Env):
         self.info = {"Fidelity": self.fidelity}
         self.reward = 0
         self.current_state = self.register_init_state
-        self.observation = get_observation(self.current_state)
+
+        # new code 
+        self.U = q.qeye(2**self.register_num_spins)
+        self.U.dims = self.register_dims
+        self.observation = get_observation(self.U)
+        # old code 
+        # self.observation = get_observation(self.current_state)
+
         self.done = False
 
         # action and observation space
@@ -99,20 +106,25 @@ class Environment2(Evolution, gym.Env):
                 ("cont_rot", dict(t=1e-6 * action[1], phi=2 * np.pi * action[2])),
             ]
 
-        # define the initial regsiter state as the current state
-        self.old_register_states = [self.current_state]
-
         # choose a random bath configuration
+        # random.seed(12)
         i = random.randint(0, self.num_bath_configs - 1)
         bath_configs_idx = [i]
 
+        # define the initial regsiter state as the current state
+        self.old_register_states = [self.current_state]
         self.current_state = self.calc_states(bath_configs_idx=bath_configs_idx)[0, 0]
-        self.fidelity = calc_fidelity(self.current_state, self.target)
-        self.current_state = q.Qobj(self.current_state, dims=self.target.dims)
-        self.observation = get_observation(self.current_state)
 
+        # old code
+        # self.current_state = q.Qobj(self.current_state, dims=self.target.dims)
+        # self.fidelity = calc_fidelity(self.current_state, self.target)
+        # self.observation = get_observation(self.current_state)
+        # new code
         # self.fidelity = self.calc_values('fidelity', bath_configs_idx=bath_configs_idx)[0,0]
-        # self.observation = None
+        self.fidelity = calc_fidelity(self.current_state, self.target)
+        self.approx_level = 'no_bath'
+        self.U = self.get_gates(gate_props_list=self.gate_props_list)[0] * self.U
+        self.observation = get_observation(self.U)
 
         # done
         if self.count == self.max_steps:
@@ -138,7 +150,14 @@ class Environment2(Evolution, gym.Env):
 
         self.count = 0
         self.current_state = self.register_init_state
-        self.observation = get_observation(self.current_state)
+
+        # new code 
+        self.U = q.qeye(2**self.register_num_spins)
+        self.U.dims = self.register_dims
+        self.observation = get_observation(self.U)
+        # old code 
+        # self.observation = get_observation(self.current_state)
+
         self.fidelity = 0
         self.info = {"Fidelity": self.fidelity}
         self.reward = 0
@@ -368,9 +387,10 @@ class Environment2(Evolution, gym.Env):
 
     # -------------------------------------------------
 
-    def _calc_quantity(self, bath_config, quantity, t_list, old_register_states):
+    def _calc_quantity(self, i, quantity, t_list, old_register_states):
         """Function to compute bath quantities in parallel."""
 
+        bath_config = self.bath_configs[i]
         if bath_config == []:
             return self._get_no_bath(quantity, t_list, old_register_states)
 
@@ -389,7 +409,7 @@ class Environment2(Evolution, gym.Env):
     def _calc_quantity_wrapper(self, args):
         """Wrapper function for multiprocessing"""
         i, quantity, t_list, old_register_states = args
-        return self._calc_quantity(self.bath_configs[i], quantity, t_list, old_register_states)
+        return self._calc_quantity(i, quantity, t_list, old_register_states)
 
     def calc_quantites(self, quantity, bath_configs_idx, t_list, old_register_states):
 
@@ -403,7 +423,7 @@ class Environment2(Evolution, gym.Env):
         if self.env_approx_level == "no_bath":
             return self._get_no_bath(quantity, t_list, old_register_states)
 
-        disable_tqdm = not True # True
+        disable_tqdm = not False # True
         message = "Sampling over spin baths..."
 
         quantites_baths = np.zeros(
