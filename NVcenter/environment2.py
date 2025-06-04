@@ -423,7 +423,7 @@ class Environment2(Evolution, gym.Env):
         if self.env_approx_level == "no_bath":
             return self._get_no_bath(quantity, t_list, old_register_states)
 
-        disable_tqdm = not False # True
+        disable_tqdm = not True # True
         message = "Sampling over spin baths..."
 
         quantites_baths = np.zeros(
