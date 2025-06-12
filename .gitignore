@@ -10,6 +10,7 @@ baths/*
 logs/*
 development/log/*
 development/other/*
+NVcenter/legacy/*
 
 # But keep the .important subfolders and their contents
 # !export/.important/

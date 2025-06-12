@@ -45,7 +45,7 @@
 # C13_pos = (8.728883757198979e-10, 0.0, 1.8558998769620693e-10) # Dominik
 # register(
 #     id='ClusterExpansion-v1',
-#     entry_point='NVcenter:custom_envs:ClusterExpansion',
+#     entry_point='custom_envs:ClusterExpansion',
 #     kwargs= {"register_config": [('NV', (0, 0, 0), 0, {}), ('C13', C13_pos, 0, {})],
 #              "target": 0.5 * q.tensor(q.ket2dm(q.basis(2,0)), q.ket2dm( q.basis(2,0) + q.basis(2,1) )),
 #              }, 
@@ -61,5 +61,5 @@ class ClusterExpansion(Environment2):
 
 # 6. Run the training script (in the NVcenter folder):
 # ----------------------------------------------------------------------
-# python -m rl_zoo3.train --algo ppo --env ClusterExpansion-v1 -n 50000 -optimize --n-trials 1000 --n-jobs 2 --sampler random --pruner median
+# python -m rl_zoo3.train --algo ppo --env ClusterExpansion-v1 -n 500 -optimize --n-trials 10 --n-jobs 2 --sampler random --pruner median --study-name test --storage sqlite:///optuna_results.db
 # ----------------------------------------------------------------------

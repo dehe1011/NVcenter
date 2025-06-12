@@ -1,3 +1,4 @@
 qutip
 rl_zoo3
 tensorboard
+optuna-dashboard
