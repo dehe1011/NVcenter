@@ -11,6 +11,7 @@ logs/*
 development/log/*
 development/other/*
 NVcenter/legacy/*
+optuna_results.db
 
 # But keep the .important subfolders and their contents
 # !export/.important/

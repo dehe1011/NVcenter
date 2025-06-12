@@ -63,3 +63,10 @@ class ClusterExpansion(Environment2):
 # ----------------------------------------------------------------------
 # python -m rl_zoo3.train --algo ppo --env ClusterExpansion-v1 -n 500 -optimize --n-trials 10 --n-jobs 2 --sampler random --pruner median --study-name test --storage sqlite:///optuna_results.db
 # ----------------------------------------------------------------------
+
+# 7. Start the Optuna dashboard:
+# ----------------------------------------------------------------------
+# optuna-dashboard sqlite:///optuna_results.db
+# copy-paste in an internet browser the address outputted by the bash (typically http://127.0.0.1:8080/)
+
+# ----------------------------------------------------------------------
