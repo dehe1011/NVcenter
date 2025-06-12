@@ -17,7 +17,5 @@ from .hamiltonian import *
 from .evolution import *
 from .environment2 import *
 
-from .legacy import *
-
 from .visualization import *
 from .export import *
