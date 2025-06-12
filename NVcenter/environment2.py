@@ -2,7 +2,6 @@ import time
 import random
 from itertools import product
 import multiprocessing
-import pickle
 
 from tqdm import tqdm
 import numpy as np
@@ -13,8 +12,7 @@ from . import DEFAULTS
 from .evolution import Evolution
 from .utils import calc_fidelity
 
-# -------------------------------------------------
-
+# ----------------------------------------------------------------------
 
 def get_observation(state):
     """Helper function to get the observation of a quantum state."""
@@ -35,8 +33,7 @@ def chunk_list(lst, chunk_size=1000):
     for i in range(0, len(lst), chunk_size):
         yield lst[i:i + chunk_size]
 
-# -------------------------------------------------
-
+# ----------------------------------------------------------------------
 
 class Environment2(Evolution, gym.Env):
     def __init__(self, register_config, **kwargs):

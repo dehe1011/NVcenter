@@ -7,6 +7,9 @@ howto/
 TODO.txt
 export/*
 baths/*
+logs/*
+development/log/*
+development/other/*
 
 # But keep the .important subfolders and their contents
 # !export/.important/

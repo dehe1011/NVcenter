@@ -16,7 +16,7 @@ authors = [
 dynamic = ["version", "dependencies", "optional-dependencies"]
 
 [tool.setuptools]
-packages = ["NVcenter"]
+packages = ["NVcenter", "NVcenter.mitigation", "NVcenter.mitigation_sympy"]
 
 [tool.setuptools.dynamic]
 version = {attr = "NVcenter.__version__"}

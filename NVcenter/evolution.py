@@ -3,8 +3,6 @@ import copy
 
 import numpy as np
 import qutip as q
-from qiskit.circuit import QuantumCircuit
-from qiskit.quantum_info import Operator
 
 from . import DEFAULTS
 from .hamiltonian import Hamiltonian
@@ -13,26 +11,22 @@ from .utils import calc_fidelity, calc_logarithmic_negativity, spherical_to_cart
 
 # -------------------------------------------------
 
+def get_hada_gate(num_qubits, target):
+    """Returns the Hadamard gate on the target qubit for a system with num_qubits."""
+    ops = [q.qeye(2) for _ in range(num_qubits)]
+    ops[target] = q.gates.hadamard_transform()
+    return q.tensor(ops)
 
 def get_cnot_gate(num_qubits, control, target):
-    """Returns the CNOT gate for a given number of qubits, control and target qubit."""
+    """Returns a CNOT gate with specified control and target qubits in a num_qubit system."""
+    
+    ops_0 = [q.qeye(2) for _ in range(num_qubits)]
+    ops_1 = [q.qeye(2) for _ in range(num_qubits)]
 
-    qc = QuantumCircuit(num_qubits)
-    qc.cx(num_qubits - 1 - control, num_qubits - 1 - target)
-    dims = [[2] * num_qubits, [2] * num_qubits]
-    cnot_gate = Operator(qc).data
-    return q.Qobj(cnot_gate, dims=dims)
-
-
-def get_hada_gate(num_qubits, target):
-    """Returns the Hadamard gate for a given number of qubits and target qubit."""
-
-    qc = QuantumCircuit(num_qubits)
-    qc.h(num_qubits - 1 - target)
-    dims = [[2] * num_qubits, [2] * num_qubits]
-    hada_gate = Operator(qc).data
-    return q.Qobj(hada_gate, dims=dims)
-
+    ops_0[control] = q.fock_dm(2,0)
+    ops_1[control] = q.fock_dm(2,1)
+    ops_1[target] = q.sigmax()
+    return q.tensor(ops_0) + q.tensor(ops_1)
 
 # -------------------------------------------------
 
