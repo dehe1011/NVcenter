@@ -51,6 +51,7 @@
 #              }, 
 # )
 
+
 # 5. Create an alias environment class in this file
 # ----------------------------------------------------------------------
 # NVcenter/custom_envs.py
@@ -63,6 +64,7 @@ class ClusterExpansion(Environment2):
 # ----------------------------------------------------------------------
 # python -m rl_zoo3.train --algo ppo --env ClusterExpansion-v1 -n 500 -optimize --n-trials 10 --n-jobs 2 --sampler random --pruner median --study-name test --storage sqlite:///optuna_results.db
 # ----------------------------------------------------------------------
+
 
 # 7. Start the Optuna dashboard:
 # ----------------------------------------------------------------------

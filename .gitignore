@@ -8,6 +8,7 @@ TODO.txt
 export/*
 baths/*
 logs/*
+log/*
 development/log/*
 development/other/*
 NVcenter/legacy/*
